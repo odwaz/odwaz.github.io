@@ -143,7 +143,33 @@
     font-size: 1.05rem;
     font-weight: 600;
     font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .card h3 a {
     color: var(--text);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .card h3 a:hover { color: var(--accent); }
+  .card h3 .icon { font-size: 0.8em; opacity: 0.6; transition: opacity 0.15s, transform 0.15s; }
+  .card h3 a:hover .icon { opacity: 1; transform: translate(2px, -2px); }
+  .card .badge {
+    display: inline-block;
+    margin-left: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(122, 162, 255, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(122, 162, 255, 0.3);
+    vertical-align: middle;
+  }
+  .card .badge.repo {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--muted);
+    border-color: var(--border-strong);
   }
   .card .sub {
     color: var(--muted);
@@ -251,49 +277,49 @@
 <div class="grid">
 
   <div class="card">
-    <h3>online-spaza-microservices</h3>
+    <h3><a href="https://github.com/odwaz/online-spaza-microservices">online-spaza-microservices <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
     <p class="sub">Township spaza-shop delivery platform &middot; 7 microservices on Kubernetes</p>
     <div class="row good"><span class="label">Strong:</span> Kafka event-driven (retry/DLT), <code>@Async</code> + Reactor, Apache Ignite cache, JWT, Stripe-webhook idempotency, 68 tests</div>
     <div class="row gap"><span class="label">Gaps:</span> OAuth2 Authorization Server, records / <code>@Value</code>, RabbitMQ</div>
   </div>
 
   <div class="card">
-    <h3>real-time-cdp</h3>
+    <h3><a href="https://odwaz.github.io/real-time-cdp/">real-time-cdp <span class="icon">&#x2197;</span></a><span class="badge">site</span></h3>
     <p class="sub">Real-time Customer Data Platform &middot; ingestion, segments, automation</p>
     <div class="row good"><span class="label">Strong:</span> Java records + sealed interfaces (Strategy/ADT), Kafka producer/consumer, WebFlux, Caffeine, JWT, 13 tests incl. property-based</div>
     <div class="row gap"><span class="label">Gaps:</span> idempotency keys, Redis (distributed cache), RabbitMQ</div>
   </div>
 
   <div class="card">
-    <h3>creator-platform</h3>
-    <p class="sub">Multi-service platform for creator&times;brand campaigns &middot; <a href="https://odwaz.github.io/creator-platform/">site</a></p>
+    <h3><a href="https://github.com/odwaz/creator-platform">creator-platform <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
+    <p class="sub">Multi-service platform for creator&times;brand campaigns</p>
     <div class="row good"><span class="label">Strong:</span> OAuth2 Authorization Server + resource server, JWT claims relay, deterministic-key idempotency on payouts, jqwik property tests</div>
     <div class="row gap"><span class="label">Gaps:</span> caching, Kafka (replace synchronous HTTP), Spring events / <code>@EventListener</code>, <code>CompletableFuture</code></div>
   </div>
 
   <div class="card">
-    <h3>wallet-microservices</h3>
+    <h3><a href="https://github.com/odwaz/wallet-microservices">wallet-microservices <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
     <p class="sub">Reactive wallet split &middot; auth / wallet / transaction / webhook / gateway</p>
     <div class="row good"><span class="label">Strong:</span> custom OAuth2 OTP grant, Reactor with retry-backoff, BCrypt, 23 tests</div>
     <div class="row gap"><span class="label">Gaps:</span> caching, Kafka / RabbitMQ, client-supplied idempotency keys, records</div>
   </div>
 
   <div class="card">
-    <h3>wallet_apiv2_reactive</h3>
+    <h3><a href="https://github.com/odwaz/wallet_apiv2_reactive">wallet_apiv2_reactive <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
     <p class="sub">Reactive wallet monolith &middot; WebFlux + R2DBC</p>
     <div class="row good"><span class="label">Strong:</span> OAuth2 Authorization Server (RSA + JWKSet), <code>Mono.zip</code> velocity checks, optimistic locking</div>
     <div class="row gap"><span class="label">Gaps:</span> tests (only 1), wire commented Kafka stub, caching, strong idempotency</div>
   </div>
 
   <div class="card">
-    <h3>sme_directory</h3>
+    <h3><a href="https://odwaz.github.io/sme_directory/">sme_directory <span class="icon">&#x2197;</span></a><span class="badge">site</span></h3>
     <p class="sub">Directory of Black-owned SMEs in South Africa &middot; WebFlux + R2DBC</p>
     <div class="row good"><span class="label">Strong:</span> reactive stack, JWT, AES-GCM field encryption, rate limiter (<code>ConcurrentHashMap</code> + <code>AtomicInteger</code>), 9 integration tests</div>
     <div class="row gap"><span class="label">Gaps:</span> caching, events / MQ, idempotency, OAuth2</div>
   </div>
 
   <div class="card">
-    <h3>TippJaar</h3>
+    <h3><a href="https://odwaz.github.io/TippJaar/">TippJaar <span class="icon">&#x2197;</span></a><span class="badge">site</span></h3>
     <p class="sub">Tipping / fundraising platform &middot; earliest-stage repo</p>
     <div class="row good"><span class="label">Strong:</span> Spring Data JPA layering, <code>@Scheduled</code> campaign jobs</div>
     <div class="row gap"><span class="label">Gaps:</span> tests (0), wire JWT, hash passwords, idempotency, caching, events</div>
