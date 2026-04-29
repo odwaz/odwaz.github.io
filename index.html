@@ -5,154 +5,312 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Odwa Z — Backend Engineer</title>
 <meta name="description" content="Backend engineer focused on reliable, scalable, secure Java/Spring systems. Portfolio of microservice and reactive projects.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0e1116;
-    --panel: #161b22;
-    --border: #30363d;
-    --text: #e6edf3;
-    --muted: #8b949e;
-    --accent: #58a6ff;
-    --good: #3fb950;
-    --gap: #d29922;
+    --bg: #0b1020;
+    --bg-grad-1: #0b1020;
+    --bg-grad-2: #1a1145;
+    --panel: rgba(255, 255, 255, 0.04);
+    --panel-hover: rgba(255, 255, 255, 0.07);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.18);
+    --text: #f1f5fb;
+    --muted: #9aa4b8;
+    --accent: #7aa2ff;
+    --accent-2: #b388ff;
+    --good: #4ade80;
+    --gap: #fbbf24;
+    --pink: #f472b6;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    line-height: 1.55;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
     font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(122, 162, 255, 0.25), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 30%, rgba(179, 136, 255, 0.18), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 0% 60%, rgba(244, 114, 182, 0.10), transparent 60%),
+      linear-gradient(180deg, #0b1020 0%, #0a0d1c 100%);
+    background-attachment: fixed;
   }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .wrap { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
-  header { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; }
-  header h1 { margin: 0 0 8px; font-size: 2rem; }
-  header .tag { color: var(--muted); margin: 0; }
-  header .links { margin-top: 12px; }
-  header .links a { margin-right: 16px; }
-  h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 48px; }
-  .lead { color: var(--muted); }
+  code, .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a { color: var(--accent); text-decoration: none; transition: color 0.15s; }
+  a:hover { color: var(--accent-2); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 64px 24px 80px; }
+
+  header {
+    margin-bottom: 56px;
+  }
+  .avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 50%, var(--pink) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1.6rem; color: #0b1020;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 32px rgba(122, 162, 255, 0.35);
+  }
+  header h1 {
+    margin: 0 0 12px;
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #f1f5fb 0%, #b388ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header .tag {
+    color: var(--muted);
+    margin: 0 0 20px;
+    font-size: 1.1rem;
+    max-width: 640px;
+  }
+  header .tag strong { color: var(--text); font-weight: 500; }
+  .links {
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .links a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .links a:hover {
+    background: var(--panel-hover);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 64px 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .section-sub { color: var(--muted); margin: 0 0 24px; }
+
+  .lead { color: var(--muted); font-size: 1.05rem; max-width: 720px; }
+  .lead em { color: var(--text); font-style: normal; font-weight: 500; }
+
+  .topic-pills {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin: 16px 0 0;
+  }
+  .pill {
+    font-size: 0.78rem;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 18px;
   }
   .card {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
   }
-  .card h3 { margin: 0 0 4px; font-size: 1.05rem; }
-  .card .sub { color: var(--muted); font-size: 0.85rem; margin: 0 0 12px; }
-  .card .row { font-size: 0.88rem; margin: 6px 0; }
-  .card .row .label { color: var(--muted); display: inline-block; min-width: 64px; }
-  .tag-good { color: var(--good); }
-  .tag-gap { color: var(--gap); }
-  .topic-list { padding-left: 18px; margin: 4px 0; }
-  .topic-list li { margin: 2px 0; }
-  .legend { font-size: 0.85rem; color: var(--muted); margin-bottom: 16px; }
-  .legend span { margin-right: 16px; }
-  footer { color: var(--muted); margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 0.85rem; }
-  code { background: #1f2630; padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+  .card::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(122, 162, 255, 0.05) 100%);
+    opacity: 0; transition: opacity 0.2s; pointer-events: none;
+  }
+  .card:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+  .card:hover::before { opacity: 1; }
+  .card h3 {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    color: var(--text);
+  }
+  .card .sub {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 0 0 16px;
+    line-height: 1.5;
+  }
+  .card .row {
+    font-size: 0.88rem;
+    margin: 10px 0;
+    padding-left: 18px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .card .row::before {
+    content: "";
+    position: absolute; left: 0; top: 8px;
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .card .row.good::before { background: var(--good); box-shadow: 0 0 8px rgba(74, 222, 128, 0.5); }
+  .card .row.gap::before  { background: var(--gap); box-shadow: 0 0 8px rgba(251, 191, 36, 0.5); }
+  .card .label {
+    color: var(--muted);
+    font-weight: 500;
+    margin-right: 4px;
+  }
+  .card code {
+    background: rgba(122, 162, 255, 0.12);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.82em;
+  }
+
+  .legend {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    font-size: 0.85rem; color: var(--muted);
+    margin: 0 0 20px;
+  }
+  .legend .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .legend .dot.good { background: var(--good); box-shadow: 0 0 8px rgba(74, 222, 128, 0.5); }
+  .legend .dot.gap  { background: var(--gap);  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5); }
+
+  footer {
+    color: var(--muted);
+    margin-top: 80px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header>
-  <h1>Odwa Z</h1>
-  <p class="tag">Backend engineer — Java / Spring Boot / WebFlux. Building reliable, scalable, secure systems.</p>
+  <div class="avatar">OZ</div>
+  <h1>Odwa Z<br>Backend Engineer</h1>
+  <p class="tag">
+    Java / Spring Boot / WebFlux. Building <strong>reliable, scalable, secure</strong> systems &mdash;
+    not just code that compiles.
+  </p>
   <div class="links">
-    <a href="https://github.com/odwaz">GitHub</a>
-    <a href="mailto:odwadevwork@gmail.com">Email</a>
+    <a href="https://github.com/odwaz">GitHub &rarr;</a>
+    <a href="mailto:odwadevwork@gmail.com">Email &rarr;</a>
   </div>
 </header>
 
 <section>
   <p class="lead">
-    Strong backend engineers don't just write code &mdash; they build systems that survive load, partial failure,
-    hostile traffic, and time. Below is a portfolio of Java projects, each scored honestly against core backend
-    topics: what's implemented and what's the next learning target.
+    Strong backend engineers don't just write code &mdash; they build systems that survive load, partial
+    failure, hostile traffic, and time. Below is a portfolio of Java projects, each scored honestly against
+    core backend topics: <em>what's implemented and what's the next learning target.</em>
   </p>
-  <p class="lead">
-    Topics tracked across the portfolio: SOLID, concurrency, immutability, streaming &amp; messaging, caching,
-    SSL/TLS &middot; JWT &middot; OAuth2, design patterns, TDD, event-driven architecture, Kafka/RabbitMQ, idempotency.
-  </p>
+  <div class="topic-pills">
+    <span class="pill">SOLID</span>
+    <span class="pill">Concurrency</span>
+    <span class="pill">Immutability</span>
+    <span class="pill">Streaming &amp; Messaging</span>
+    <span class="pill">Caching</span>
+    <span class="pill">SSL/TLS &middot; JWT &middot; OAuth2</span>
+    <span class="pill">Design Patterns</span>
+    <span class="pill">TDD</span>
+    <span class="pill">Event-Driven Architecture</span>
+    <span class="pill">Kafka / RabbitMQ</span>
+    <span class="pill">Idempotency</span>
+  </div>
 </section>
 
 <h2>Projects</h2>
+<p class="section-sub">Seven Java repositories &middot; honest scorecard, not marketing copy.</p>
 
-<p class="legend">
-  <span><span class="tag-good">&#x25CF;</span> implemented</span>
-  <span><span class="tag-gap">&#x25CF;</span> next-step gap</span>
-</p>
+<div class="legend">
+  <span><span class="dot good"></span>implemented</span>
+  <span><span class="dot gap"></span>next-step gap</span>
+</div>
 
 <div class="grid">
 
   <div class="card">
     <h3>online-spaza-microservices</h3>
-    <p class="sub">Township spaza-shop delivery platform &middot; 7 microservices, K8s</p>
-    <div class="row"><span class="label tag-good">Strong:</span> Kafka event-driven (retry/DLT), <code>@Async</code> + Reactor, Apache Ignite cache, JWT, Stripe-webhook idempotency, 68 tests</div>
-    <div class="row"><span class="label tag-gap">Gaps:</span> OAuth2 Authorization Server, records/<code>@Value</code>, RabbitMQ</div>
+    <p class="sub">Township spaza-shop delivery platform &middot; 7 microservices on Kubernetes</p>
+    <div class="row good"><span class="label">Strong:</span> Kafka event-driven (retry/DLT), <code>@Async</code> + Reactor, Apache Ignite cache, JWT, Stripe-webhook idempotency, 68 tests</div>
+    <div class="row gap"><span class="label">Gaps:</span> OAuth2 Authorization Server, records / <code>@Value</code>, RabbitMQ</div>
   </div>
 
   <div class="card">
     <h3>real-time-cdp</h3>
-    <p class="sub">Real-time Customer Data Platform &middot; event ingestion, segments, automation</p>
-    <div class="row"><span class="label tag-good">Strong:</span> Java records + sealed interfaces (Strategy/ADT), Kafka producer/consumer, WebFlux, Caffeine, JWT, 13 tests incl. property-based</div>
-    <div class="row"><span class="label tag-gap">Gaps:</span> idempotency keys, Redis (distributed cache), RabbitMQ</div>
+    <p class="sub">Real-time Customer Data Platform &middot; ingestion, segments, automation</p>
+    <div class="row good"><span class="label">Strong:</span> Java records + sealed interfaces (Strategy/ADT), Kafka producer/consumer, WebFlux, Caffeine, JWT, 13 tests incl. property-based</div>
+    <div class="row gap"><span class="label">Gaps:</span> idempotency keys, Redis (distributed cache), RabbitMQ</div>
   </div>
 
   <div class="card">
     <h3>creator-platform</h3>
     <p class="sub">Multi-service platform for creator&times;brand campaigns &middot; <a href="https://odwaz.github.io/creator-platform/">site</a></p>
-    <div class="row"><span class="label tag-good">Strong:</span> OAuth2 Authorization Server + resource server, JWT claims relay, deterministic-key idempotency on payouts, jqwik property tests</div>
-    <div class="row"><span class="label tag-gap">Gaps:</span> caching, Kafka (replace synchronous HTTP), Spring events / <code>@EventListener</code>, <code>CompletableFuture</code></div>
+    <div class="row good"><span class="label">Strong:</span> OAuth2 Authorization Server + resource server, JWT claims relay, deterministic-key idempotency on payouts, jqwik property tests</div>
+    <div class="row gap"><span class="label">Gaps:</span> caching, Kafka (replace synchronous HTTP), Spring events / <code>@EventListener</code>, <code>CompletableFuture</code></div>
   </div>
 
   <div class="card">
     <h3>wallet-microservices</h3>
     <p class="sub">Reactive wallet split &middot; auth / wallet / transaction / webhook / gateway</p>
-    <div class="row"><span class="label tag-good">Strong:</span> custom OAuth2 OTP grant, Reactor with retry-backoff, BCrypt, 23 tests</div>
-    <div class="row"><span class="label tag-gap">Gaps:</span> caching, Kafka/RabbitMQ, client-supplied idempotency keys, records</div>
+    <div class="row good"><span class="label">Strong:</span> custom OAuth2 OTP grant, Reactor with retry-backoff, BCrypt, 23 tests</div>
+    <div class="row gap"><span class="label">Gaps:</span> caching, Kafka / RabbitMQ, client-supplied idempotency keys, records</div>
   </div>
 
   <div class="card">
     <h3>wallet_apiv2_reactive</h3>
     <p class="sub">Reactive wallet monolith &middot; WebFlux + R2DBC</p>
-    <div class="row"><span class="label tag-good">Strong:</span> OAuth2 Authorization Server (RSA + JWKSet), <code>Mono.zip</code> velocity checks, optimistic locking</div>
-    <div class="row"><span class="label tag-gap">Gaps:</span> tests (only 1), wire commented Kafka stub, caching, strong idempotency</div>
+    <div class="row good"><span class="label">Strong:</span> OAuth2 Authorization Server (RSA + JWKSet), <code>Mono.zip</code> velocity checks, optimistic locking</div>
+    <div class="row gap"><span class="label">Gaps:</span> tests (only 1), wire commented Kafka stub, caching, strong idempotency</div>
   </div>
 
   <div class="card">
     <h3>sme_directory</h3>
     <p class="sub">Directory of Black-owned SMEs in South Africa &middot; WebFlux + R2DBC</p>
-    <div class="row"><span class="label tag-good">Strong:</span> reactive stack, JWT, AES-GCM field encryption, rate limiter (<code>ConcurrentHashMap</code> + <code>AtomicInteger</code>), 9 integration tests</div>
-    <div class="row"><span class="label tag-gap">Gaps:</span> caching, events/MQ, idempotency, OAuth2</div>
+    <div class="row good"><span class="label">Strong:</span> reactive stack, JWT, AES-GCM field encryption, rate limiter (<code>ConcurrentHashMap</code> + <code>AtomicInteger</code>), 9 integration tests</div>
+    <div class="row gap"><span class="label">Gaps:</span> caching, events / MQ, idempotency, OAuth2</div>
   </div>
 
   <div class="card">
     <h3>TippJaar</h3>
     <p class="sub">Tipping / fundraising platform &middot; earliest-stage repo</p>
-    <div class="row"><span class="label tag-good">Strong:</span> Spring Data JPA layering, <code>@Scheduled</code> campaign jobs</div>
-    <div class="row"><span class="label tag-gap">Gaps:</span> tests (0), wire JWT, hash passwords, idempotency, caching, events</div>
+    <div class="row good"><span class="label">Strong:</span> Spring Data JPA layering, <code>@Scheduled</code> campaign jobs</div>
+    <div class="row gap"><span class="label">Gaps:</span> tests (0), wire JWT, hash passwords, idempotency, caching, events</div>
   </div>
 
 </div>
 
 <h2>How to read this</h2>
 <p class="lead">
-  Every project README has a <em>Backend Engineering Topics &mdash; Coverage &amp; Gaps</em> section that names
-  files and line numbers for each claim. The gaps aren't hidden weaknesses &mdash; they're the next iteration.
-  This portfolio is a learning trajectory, not a finished product.
+  Every project README has a <em>Backend Engineering Topics &mdash; Coverage &amp; Gaps</em> section that
+  names files and line numbers for each claim. The gaps aren't hidden weaknesses &mdash; they're the next
+  iteration. This portfolio is a <em>learning trajectory</em>, not a finished product.
 </p>
 
 <footer>
-  &copy; <span id="y"></span> Odwa Z &middot; <a href="https://github.com/odwaz">github.com/odwaz</a>
+  <span>&copy; <span id="y"></span> Odwa Z</span>
+  <span><a href="https://github.com/odwaz">github.com/odwaz</a></span>
 </footer>
 
 </div>
