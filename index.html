@@ -177,31 +177,27 @@
     margin: 0 0 16px;
     line-height: 1.5;
   }
-  .card .row {
-    font-size: 0.88rem;
-    margin: 10px 0;
-    padding-left: 18px;
-    position: relative;
-    line-height: 1.5;
+  .card .chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin: 10px 0 0;
   }
-  .card .row::before {
-    content: "";
-    position: absolute; left: 0; top: 8px;
-    width: 8px; height: 8px; border-radius: 50%;
-  }
-  .card .row.good::before { background: var(--good); box-shadow: 0 0 8px rgba(74, 222, 128, 0.5); }
-  .card .row.gap::before  { background: var(--gap); box-shadow: 0 0 8px rgba(251, 191, 36, 0.5); }
-  .card .label {
-    color: var(--muted);
+  .card .chip {
+    font-size: 0.72rem;
     font-weight: 500;
-    margin-right: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    white-space: nowrap;
   }
-  .card code {
-    background: rgba(122, 162, 255, 0.12);
-    color: var(--accent);
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 0.82em;
+  .card .chip.good {
+    background: rgba(74, 222, 128, 0.08);
+    color: var(--good);
+    border-color: rgba(74, 222, 128, 0.3);
+  }
+  .card .chip.gap {
+    background: rgba(251, 191, 36, 0.08);
+    color: var(--gap);
+    border-color: rgba(251, 191, 36, 0.3);
   }
 
   .legend {
@@ -246,93 +242,93 @@
 </header>
 
 <section>
-  <p class="lead">
-    Strong backend engineers don't just write code &mdash; they build systems that survive load, partial
-    failure, hostile traffic, and time. Below is a portfolio of Java projects, each scored honestly against
-    core backend topics: <em>what's implemented and what's the next learning target.</em>
-  </p>
   <div class="topic-pills">
     <span class="pill">SOLID</span>
     <span class="pill">Concurrency</span>
     <span class="pill">Immutability</span>
     <span class="pill">Streaming &amp; Messaging</span>
     <span class="pill">Caching</span>
-    <span class="pill">SSL/TLS &middot; JWT &middot; OAuth2</span>
+    <span class="pill">JWT &middot; OAuth2</span>
     <span class="pill">Design Patterns</span>
     <span class="pill">TDD</span>
-    <span class="pill">Event-Driven Architecture</span>
+    <span class="pill">Event-Driven</span>
     <span class="pill">Kafka / RabbitMQ</span>
     <span class="pill">Idempotency</span>
   </div>
 </section>
 
 <h2>Projects</h2>
-<p class="section-sub">Seven Java repositories &middot; honest scorecard, not marketing copy.</p>
-
 <div class="legend">
   <span><span class="dot good"></span>implemented</span>
-  <span><span class="dot gap"></span>next-step gap</span>
+  <span><span class="dot gap"></span>next iteration</span>
 </div>
 
 <div class="grid">
 
   <div class="card">
     <h3><a href="https://github.com/odwaz/online-spaza-microservices">online-spaza-microservices <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
-    <p class="sub">Township spaza-shop delivery platform &middot; 7 microservices on Kubernetes</p>
-    <div class="row good"><span class="label">Strong:</span> Kafka event-driven (retry/DLT), <code>@Async</code> + Reactor, Apache Ignite cache, JWT, Stripe-webhook idempotency, 68 tests</div>
-    <div class="row gap"><span class="label">Gaps:</span> OAuth2 Authorization Server, records / <code>@Value</code>, RabbitMQ</div>
+    <p class="sub">Township spaza-shop delivery platform &middot; 7 microservices on K8s</p>
+    <div class="chips">
+      <span class="chip good">Kafka</span><span class="chip good">Reactor</span><span class="chip good">Ignite cache</span><span class="chip good">JWT</span><span class="chip good">Idempotency</span><span class="chip good">68 tests</span>
+      <span class="chip gap">OAuth2 server</span><span class="chip gap">Records</span><span class="chip gap">RabbitMQ</span>
+    </div>
   </div>
 
   <div class="card">
     <h3><a href="https://odwaz.github.io/real-time-cdp/">real-time-cdp <span class="icon">&#x2197;</span></a><span class="badge">site</span></h3>
-    <p class="sub">Real-time Customer Data Platform &middot; ingestion, segments, automation</p>
-    <div class="row good"><span class="label">Strong:</span> Java records + sealed interfaces (Strategy/ADT), Kafka producer/consumer, WebFlux, Caffeine, JWT, 13 tests incl. property-based</div>
-    <div class="row gap"><span class="label">Gaps:</span> idempotency keys, Redis (distributed cache), RabbitMQ</div>
+    <p class="sub">Real-time CDP &middot; ingestion, segments, automation</p>
+    <div class="chips">
+      <span class="chip good">Records</span><span class="chip good">Sealed types</span><span class="chip good">Kafka</span><span class="chip good">WebFlux</span><span class="chip good">Caffeine</span><span class="chip good">JWT</span><span class="chip good">Property tests</span>
+      <span class="chip gap">Idempotency</span><span class="chip gap">Redis</span><span class="chip gap">RabbitMQ</span>
+    </div>
   </div>
 
   <div class="card">
     <h3><a href="https://github.com/odwaz/creator-platform">creator-platform <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
-    <p class="sub">Multi-service platform for creator&times;brand campaigns</p>
-    <div class="row good"><span class="label">Strong:</span> OAuth2 Authorization Server + resource server, JWT claims relay, deterministic-key idempotency on payouts, jqwik property tests</div>
-    <div class="row gap"><span class="label">Gaps:</span> caching, Kafka (replace synchronous HTTP), Spring events / <code>@EventListener</code>, <code>CompletableFuture</code></div>
+    <p class="sub">Creator &times; brand campaign platform</p>
+    <div class="chips">
+      <span class="chip good">OAuth2 server</span><span class="chip good">JWT relay</span><span class="chip good">Idempotent payouts</span><span class="chip good">jqwik</span>
+      <span class="chip gap">Caching</span><span class="chip gap">Kafka</span><span class="chip gap">Spring events</span><span class="chip gap">CompletableFuture</span>
+    </div>
   </div>
 
   <div class="card">
     <h3><a href="https://github.com/odwaz/wallet-microservices">wallet-microservices <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
-    <p class="sub">Reactive wallet split &middot; auth / wallet / transaction / webhook / gateway</p>
-    <div class="row good"><span class="label">Strong:</span> custom OAuth2 OTP grant, Reactor with retry-backoff, BCrypt, 23 tests</div>
-    <div class="row gap"><span class="label">Gaps:</span> caching, Kafka / RabbitMQ, client-supplied idempotency keys, records</div>
+    <p class="sub">Reactive wallet split &middot; auth / wallet / tx / webhook / gateway</p>
+    <div class="chips">
+      <span class="chip good">OAuth2 OTP grant</span><span class="chip good">Reactor</span><span class="chip good">BCrypt</span><span class="chip good">23 tests</span>
+      <span class="chip gap">Caching</span><span class="chip gap">Kafka</span><span class="chip gap">Idempotency keys</span><span class="chip gap">Records</span>
+    </div>
   </div>
 
   <div class="card">
     <h3><a href="https://github.com/odwaz/wallet_apiv2_reactive">wallet_apiv2_reactive <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
     <p class="sub">Reactive wallet monolith &middot; WebFlux + R2DBC</p>
-    <div class="row good"><span class="label">Strong:</span> OAuth2 Authorization Server (RSA + JWKSet), <code>Mono.zip</code> velocity checks, optimistic locking</div>
-    <div class="row gap"><span class="label">Gaps:</span> tests (only 1), wire commented Kafka stub, caching, strong idempotency</div>
+    <div class="chips">
+      <span class="chip good">OAuth2 server (RSA)</span><span class="chip good">Mono.zip</span><span class="chip good">Optimistic locking</span>
+      <span class="chip gap">Tests</span><span class="chip gap">Kafka</span><span class="chip gap">Caching</span><span class="chip gap">Idempotency</span>
+    </div>
   </div>
 
   <div class="card">
     <h3><a href="https://odwaz.github.io/sme_directory/">sme_directory <span class="icon">&#x2197;</span></a><span class="badge">site</span></h3>
-    <p class="sub">Directory of Black-owned SMEs in South Africa &middot; WebFlux + R2DBC</p>
-    <div class="row good"><span class="label">Strong:</span> reactive stack, JWT, AES-GCM field encryption, rate limiter (<code>ConcurrentHashMap</code> + <code>AtomicInteger</code>), 9 integration tests</div>
-    <div class="row gap"><span class="label">Gaps:</span> caching, events / MQ, idempotency, OAuth2</div>
+    <p class="sub">Black-owned SME directory (SA) &middot; WebFlux + R2DBC</p>
+    <div class="chips">
+      <span class="chip good">WebFlux</span><span class="chip good">R2DBC</span><span class="chip good">JWT</span><span class="chip good">AES-GCM</span><span class="chip good">Rate limiter</span><span class="chip good">9 tests</span>
+      <span class="chip gap">Caching</span><span class="chip gap">Events</span><span class="chip gap">Idempotency</span><span class="chip gap">OAuth2</span>
+    </div>
   </div>
 
   <div class="card">
     <h3><a href="https://odwaz.github.io/TippJaar/">TippJaar <span class="icon">&#x2197;</span></a><span class="badge">site</span></h3>
-    <p class="sub">Tipping / fundraising platform &middot; earliest-stage repo</p>
-    <div class="row good"><span class="label">Strong:</span> Spring Data JPA layering, <code>@Scheduled</code> campaign jobs</div>
-    <div class="row gap"><span class="label">Gaps:</span> tests (0), wire JWT, hash passwords, idempotency, caching, events</div>
+    <p class="sub">Tipping / fundraising &middot; earliest-stage repo</p>
+    <div class="chips">
+      <span class="chip good">Spring JPA</span><span class="chip good">@Scheduled</span>
+      <span class="chip gap">Tests</span><span class="chip gap">JWT</span><span class="chip gap">Password hashing</span><span class="chip gap">Idempotency</span><span class="chip gap">Caching</span><span class="chip gap">Events</span>
+    </div>
   </div>
 
 </div>
-
-<h2>How to read this</h2>
-<p class="lead">
-  Every project README has a <em>Backend Engineering Topics &mdash; Coverage &amp; Gaps</em> section that
-  names files and line numbers for each claim. The gaps aren't hidden weaknesses &mdash; they're the next
-  iteration. This portfolio is a <em>learning trajectory</em>, not a finished product.
-</p>
 
 <footer>
   <span>&copy; <span id="y"></span> Odwa Z</span>
