@@ -232,8 +232,8 @@
   <div class="avatar">OZ</div>
   <h1>Odwa Z<br>Backend Engineer</h1>
   <p class="tag">
-    Java / Spring Boot / WebFlux. Building <strong>reliable, scalable, secure</strong> systems &mdash;
-    not just code that compiles.
+    Senior-minded Java / Spring Boot backend engineer building <strong>event-driven, distributed
+    systems</strong> &mdash; reactive services, Kafka pipelines, and fintech-grade data integrity.
   </p>
   <div class="links">
     <a href="https://github.com/odwaz">GitHub &rarr;</a>
@@ -243,92 +243,61 @@
 
 <section>
   <div class="topic-pills">
-    <span class="pill">SOLID</span>
-    <span class="pill">Concurrency</span>
-    <span class="pill">Immutability</span>
-    <span class="pill">Streaming &amp; Messaging</span>
-    <span class="pill">Caching</span>
-    <span class="pill">JWT &middot; OAuth2</span>
-    <span class="pill">Design Patterns</span>
-    <span class="pill">TDD</span>
+    <span class="pill">Java 17 / 21</span>
+    <span class="pill">Spring Boot</span>
+    <span class="pill">Microservices</span>
     <span class="pill">Event-Driven</span>
-    <span class="pill">Kafka / RabbitMQ</span>
+    <span class="pill">Apache Kafka</span>
+    <span class="pill">Event Sourcing / CQRS</span>
+    <span class="pill">Distributed Systems</span>
+    <span class="pill">WebFlux / Reactive</span>
+    <span class="pill">PostgreSQL</span>
+    <span class="pill">Docker &amp; Kubernetes</span>
+    <span class="pill">AWS / Terraform</span>
+    <span class="pill">JWT &middot; OAuth2</span>
     <span class="pill">Idempotency</span>
   </div>
 </section>
 
-<h2>Projects</h2>
-<div class="legend">
-  <span><span class="dot good"></span>implemented</span>
-  <span><span class="dot gap"></span>next iteration</span>
-</div>
+<h2>Featured Projects</h2>
+<p class="section-sub">Three systems I designed and built end-to-end. Each has a full write-up &mdash; architecture, decisions, and API surface.</p>
 
 <div class="grid">
 
   <div class="card">
-    <h3><a href="https://github.com/odwaz/online-spaza-microservices">online-spaza-microservices <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
-    <p class="sub">Township spaza-shop delivery platform &middot; 7 microservices on K8s</p>
+    <h3><a href="https://odwaz.github.io/real-time-cdp/">Gimba &mdash; Real-time CDP <span class="icon">&#x2197;</span></a><span class="badge">write-up</span></h3>
+    <p class="sub">Multi-tenant Customer Data Platform. Event ingestion &rarr; Kafka &rarr; identity stitching &rarr; segmentation &rarr; webhook automation &mdash; fully reactive, no blocking calls in the hot path. Append-only event log with profile replay; projections updated off Kafka.</p>
     <div class="chips">
-      <span class="chip good">Kafka</span><span class="chip good">Reactor</span><span class="chip good">Ignite cache</span><span class="chip good">JWT</span><span class="chip good">Idempotency</span><span class="chip good">68 tests</span>
-      <span class="chip gap">OAuth2 server</span><span class="chip gap">Records</span><span class="chip gap">RabbitMQ</span>
+      <span class="chip good">Apache Kafka</span><span class="chip good">Event Sourcing</span><span class="chip good">CQRS projections</span><span class="chip good">Spring WebFlux</span><span class="chip good">R2DBC</span><span class="chip good">PostgreSQL JSONB</span><span class="chip good">Multi-tenant</span><span class="chip good">Resilience4j</span><span class="chip good">Property tests</span>
     </div>
   </div>
 
   <div class="card">
-    <h3><a href="https://odwaz.github.io/real-time-cdp/">real-time-cdp <span class="icon">&#x2197;</span></a><span class="badge">site</span></h3>
-    <p class="sub">Real-time CDP &middot; ingestion, segments, automation</p>
+    <h3><a href="https://odwaz.github.io/sme_directory/">SME Directory <span class="icon">&#x2197;</span></a><span class="badge">write-up</span></h3>
+    <p class="sub">Trust-and-discovery platform for Black-owned SMEs in SA. Verified directory, full-text search, and a hash-chained transaction ledger SMEs can take to a bank &mdash; with field-level encryption and a POPIA-ready audit trail.</p>
     <div class="chips">
-      <span class="chip good">Records</span><span class="chip good">Sealed types</span><span class="chip good">Kafka</span><span class="chip good">WebFlux</span><span class="chip good">Caffeine</span><span class="chip good">JWT</span><span class="chip good">Property tests</span>
-      <span class="chip gap">Idempotency</span><span class="chip gap">Redis</span><span class="chip gap">RabbitMQ</span>
+      <span class="chip good">Spring WebFlux</span><span class="chip good">R2DBC</span><span class="chip good">PostgreSQL FTS</span><span class="chip good">Hash-chained ledger</span><span class="chip good">AES-256-GCM</span><span class="chip good">JWT + refresh rotation</span><span class="chip good">Audit trail</span>
     </div>
   </div>
 
   <div class="card">
-    <h3><a href="https://github.com/odwaz/creator-platform">creator-platform <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
-    <p class="sub">Creator &times; brand campaign platform</p>
+    <h3><a href="https://odwaz.github.io/TippJaar/">TipJar <span class="icon">&#x2197;</span></a><span class="badge">write-up</span></h3>
+    <p class="sub">Creator donation &amp; wallet platform &mdash; campaigns, wallet-to-wallet value movement, KYC and admin controls. Provisioned on AWS with Terraform and containerised for Kubernetes.</p>
     <div class="chips">
-      <span class="chip good">OAuth2 server</span><span class="chip good">JWT relay</span><span class="chip good">Idempotent payouts</span><span class="chip good">jqwik</span>
-      <span class="chip gap">Caching</span><span class="chip gap">Kafka</span><span class="chip gap">Spring events</span><span class="chip gap">CompletableFuture</span>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3><a href="https://github.com/odwaz/wallet-microservices">wallet-microservices <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
-    <p class="sub">Reactive wallet split &middot; auth / wallet / tx / webhook / gateway</p>
-    <div class="chips">
-      <span class="chip good">OAuth2 OTP grant</span><span class="chip good">Reactor</span><span class="chip good">BCrypt</span><span class="chip good">23 tests</span>
-      <span class="chip gap">Caching</span><span class="chip gap">Kafka</span><span class="chip gap">Idempotency keys</span><span class="chip gap">Records</span>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3><a href="https://github.com/odwaz/wallet_apiv2_reactive">wallet_apiv2_reactive <span class="icon">&#x2197;</span></a><span class="badge repo">repo</span></h3>
-    <p class="sub">Reactive wallet monolith &middot; WebFlux + R2DBC</p>
-    <div class="chips">
-      <span class="chip good">OAuth2 server (RSA)</span><span class="chip good">Mono.zip</span><span class="chip good">Optimistic locking</span>
-      <span class="chip gap">Tests</span><span class="chip gap">Kafka</span><span class="chip gap">Caching</span><span class="chip gap">Idempotency</span>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3><a href="https://odwaz.github.io/sme_directory/">sme_directory <span class="icon">&#x2197;</span></a><span class="badge">site</span></h3>
-    <p class="sub">Black-owned SME directory (SA) &middot; WebFlux + R2DBC</p>
-    <div class="chips">
-      <span class="chip good">WebFlux</span><span class="chip good">R2DBC</span><span class="chip good">JWT</span><span class="chip good">AES-GCM</span><span class="chip good">Rate limiter</span><span class="chip good">9 tests</span>
-      <span class="chip gap">Caching</span><span class="chip gap">Events</span><span class="chip gap">Idempotency</span><span class="chip gap">OAuth2</span>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3><a href="https://odwaz.github.io/TippJaar/">TippJaar <span class="icon">&#x2197;</span></a><span class="badge">site</span></h3>
-    <p class="sub">Tipping / fundraising &middot; earliest-stage repo</p>
-    <div class="chips">
-      <span class="chip good">Spring JPA</span><span class="chip good">@Scheduled</span>
-      <span class="chip gap">Tests</span><span class="chip gap">JWT</span><span class="chip gap">Password hashing</span><span class="chip gap">Idempotency</span><span class="chip gap">Caching</span><span class="chip gap">Events</span>
+      <span class="chip good">Spring Boot</span><span class="chip good">Wallet ledger</span><span class="chip good">Spring Security / RBAC</span><span class="chip good">PostgreSQL</span><span class="chip good">Terraform / AWS</span><span class="chip good">Docker</span>
     </div>
   </div>
 
 </div>
+
+<h2>More on GitHub</h2>
+<p class="section-sub">
+  Other backend work &mdash;
+  <a href="https://github.com/odwaz/online-spaza-microservices">online-spaza-microservices</a> (7 Kafka microservices on K8s),
+  <a href="https://github.com/odwaz/creator-platform">creator-platform</a> (Spring Cloud + OAuth2 authorization server),
+  and <a href="https://github.com/odwaz/wallet-microservices">wallet-microservices</a>.
+  Full list at <a href="https://github.com/odwaz">github.com/odwaz</a>.
+</p>
 
 <footer>
   <span>&copy; <span id="y"></span> Odwa Z</span>
