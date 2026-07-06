@@ -215,6 +215,45 @@
   .legend .dot.good { background: var(--good); box-shadow: 0 0 8px rgba(74, 222, 128, 0.5); }
   .legend .dot.gap  { background: var(--gap);  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5); }
 
+  .cicd-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .cicd-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-size: 0.9rem; color: var(--muted); margin-bottom: 18px;
+  }
+  .cicd-head .who { color: var(--text); font-weight: 500; }
+  .tool-badge {
+    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em;
+    padding: 4px 10px; border-radius: 6px; text-transform: uppercase;
+  }
+  .tool-badge.gitlab    { background: rgba(252,109,38,0.14); color: #fca66d; border: 1px solid rgba(252,109,38,0.38); }
+  .tool-badge.terraform { background: rgba(124,58,237,0.16); color: #b388ff; border: 1px solid rgba(124,58,237,0.42); }
+  .pipeline-scroll { overflow-x: auto; padding-bottom: 4px; }
+  .pipeline { display: flex; flex-wrap: nowrap; min-width: min-content; }
+  .stage {
+    flex: 0 0 auto; min-width: 108px;
+    display: flex; flex-direction: column; gap: 3px;
+    padding: 12px 14px; margin-right: 28px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+  }
+  .stage:last-child { margin-right: 0; }
+  .stage:not(:last-child)::after {
+    content: "\2192"; position: absolute; right: -23px; top: 50%;
+    transform: translateY(-50%); color: var(--muted); font-size: 1.05rem;
+  }
+  .stage .s-name { font-weight: 600; font-size: 0.9rem; color: var(--text); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .stage .s-meta { font-size: 0.72rem; color: var(--muted); line-height: 1.35; }
+  .stage.quality { border-color: rgba(74,222,128,0.32); }
+  .stage.deploy  { border-color: rgba(122,162,255,0.42); background: rgba(122,162,255,0.07); }
+
   footer {
     color: var(--muted);
     margin-top: 80px;
@@ -288,6 +327,51 @@
     </div>
   </div>
 
+</div>
+
+<h2>CI/CD &amp; Cloud</h2>
+<p class="section-sub">How these ship &mdash; automated pipelines with quality gates, infrastructure as code, and container orchestration.</p>
+
+<div class="cicd-card">
+  <div class="cicd-head">
+    <span class="tool-badge gitlab">GitLab CI/CD</span>
+    <span class="who">Gimba (CDP) &amp; SME Directory</span>
+    &mdash; multi-stage pipeline, Maven / JDK 17
+  </div>
+  <div class="pipeline-scroll">
+    <div class="pipeline">
+      <div class="stage"><span class="s-name">build</span><span class="s-meta">mvn compile</span></div>
+      <div class="stage"><span class="s-name">test</span><span class="s-meta">JUnit 5</span></div>
+      <div class="stage quality"><span class="s-name">quality</span><span class="s-meta">SonarCloud gate</span></div>
+      <div class="stage"><span class="s-name">package</span><span class="s-meta">jar / image</span></div>
+      <div class="stage deploy"><span class="s-name">deploy</span><span class="s-meta">Kubernetes (k8s manifests)</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="cicd-card">
+  <div class="cicd-head">
+    <span class="tool-badge terraform">Terraform &rarr; AWS</span>
+    <span class="who">TipJar</span>
+    &mdash; deployment pipeline provisioned as infrastructure-as-code
+  </div>
+  <div class="pipeline-scroll">
+    <div class="pipeline">
+      <div class="stage"><span class="s-name">terraform</span><span class="s-meta">IaC apply</span></div>
+      <div class="stage"><span class="s-name">CodePipeline</span><span class="s-meta">AWS orchestration</span></div>
+      <div class="stage"><span class="s-name">CodeBuild</span><span class="s-meta">build + test</span></div>
+      <div class="stage deploy"><span class="s-name">deploy</span><span class="s-meta">AWS</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="topic-pills" style="margin-top:18px">
+  <span class="pill">GitLab CI/CD</span>
+  <span class="pill">Terraform</span>
+  <span class="pill">AWS (CodePipeline / CodeBuild)</span>
+  <span class="pill">Kubernetes</span>
+  <span class="pill">Docker</span>
+  <span class="pill">SonarCloud</span>
 </div>
 
 <h2>More on GitHub</h2>
