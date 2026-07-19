@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wallet Microservices — Distributed Digital Wallet Platform | Odwa Z</title>
+<meta name="description" content="Five reactive Spring Boot microservices behind an API gateway — OAuth2 + OTP auth, wallets, transactions, webhooks — shipped with GitLab CI/CD, ArgoCD GitOps, and Terraform on AWS.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: rgba(255, 255, 255, 0.04);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.18);
+    --text: #f1f5fb;
+    --muted: #9aa4b8;
+    --accent: #b388ff;
+    --accent-2: #7aa2ff;
+    --good: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(179, 136, 255, 0.18), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 30%, rgba(122, 162, 255, 0.12), transparent 60%),
+      linear-gradient(180deg, #0b1020 0%, #0a0d1c 100%);
+    background-attachment: fixed;
+  }
+  code, .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a { color: var(--accent); text-decoration: none; transition: color 0.15s; }
+  a:hover { color: var(--accent-2); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 56px;
+    font-size: 0.9rem;
+  }
+  .topbar .back { color: var(--muted); }
+  .topbar .back:hover { color: var(--accent); }
+  .topbar .crumb { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+  .topbar .crumb b { color: var(--text); font-weight: 600; }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem; letter-spacing: 0.02em;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  .eyebrow .sep { color: var(--muted); padding: 0 6px; }
+  h1 {
+    margin: 0 0 16px;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #f1f5fb 0%, #b388ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .thesis { color: var(--muted); font-size: 1.1rem; max-width: 720px; margin: 0 0 22px; }
+  .thesis strong { color: var(--text); font-weight: 500; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .pill {
+    font-size: 0.78rem;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .pill.hot { color: var(--accent); border-color: rgba(179,136,255,0.35); background: rgba(179,136,255,0.08); }
+
+  h2 { font-size: 1.4rem; font-weight: 600; margin: 64px 0 8px; letter-spacing: -0.01em; }
+  .section-sub { color: var(--muted); margin: 0 0 24px; max-width: 720px; }
+
+  /* ---- Signature: gateway fan-out topology ---- */
+  .topo-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 26px 24px;
+    margin-top: 28px;
+  }
+  .topo-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin: 0 0 20px;
+  }
+  .topo {
+    display: grid;
+    grid-template-columns: minmax(130px, 170px) 34px 1fr;
+    align-items: center;
+    gap: 0;
+  }
+  .gateway {
+    padding: 18px 16px;
+    background: rgba(179,136,255,0.1);
+    border: 1px solid rgba(179,136,255,0.45);
+    border-radius: 12px;
+    text-align: center;
+  }
+  .gateway .g-name { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.9rem; color: var(--accent); }
+  .gateway .g-meta { font-size: 0.68rem; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .topo-links { position: relative; height: 100%; min-height: 220px; }
+  .topo-links::before {
+    content: ""; position: absolute; left: 0; top: 50%; width: 100%; height: 1px;
+    background: var(--border-strong);
+  }
+  .topo-links::after {
+    content: ""; position: absolute; right: 0; top: 9%; bottom: 9%; width: 1px;
+    background: var(--border-strong);
+  }
+  .services { display: flex; flex-direction: column; gap: 10px; }
+  .svc {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding: 11px 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+    transition: border-color 0.15s;
+  }
+  .svc:hover { border-color: rgba(179,136,255,0.5); }
+  .svc::before {
+    content: ""; position: absolute; left: -14px; top: 50%; width: 14px; height: 1px;
+    background: var(--border-strong);
+  }
+  .svc .s-name { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.85rem; color: var(--text); }
+  .svc .s-meta { font-size: 0.74rem; color: var(--muted); }
+  .topo-foot {
+    margin: 20px 0 0; padding-top: 16px;
+    border-top: 1px dashed var(--border);
+    font-size: 0.78rem; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .topo-foot b { color: var(--good); font-weight: 600; }
+  @media (max-width: 620px) {
+    .topo { grid-template-columns: 1fr; gap: 14px; }
+    .topo-links { display: none; }
+    .svc::before { display: none; }
+  }
+
+  /* ---- Features ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+  }
+  .feature {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .feature h3 {
+    margin: 0 0 6px; font-size: 0.95rem; font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+  }
+  .feature p { margin: 0; font-size: 0.86rem; color: var(--muted); line-height: 1.55; }
+
+  /* ---- Highlights ---- */
+  .hl { border-left: 2px solid rgba(179,136,255,0.4); padding: 2px 0 2px 20px; margin: 0 0 22px; }
+  .hl h3 { margin: 0 0 4px; font-size: 1rem; font-weight: 600; }
+  .hl p { margin: 0; color: var(--muted); font-size: 0.92rem; max-width: 760px; }
+  .hl code {
+    font-size: 0.82em; background: rgba(255,255,255,0.06);
+    padding: 1px 6px; border-radius: 6px; color: var(--text);
+  }
+
+  /* ---- Stack ---- */
+  .stack-group { margin-bottom: 18px; }
+  .stack-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); margin: 0 0 8px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 0.75rem; font-weight: 500;
+    padding: 3px 10px; border-radius: 999px;
+    border: 1px solid rgba(179,136,255,0.3);
+    background: rgba(179,136,255,0.07);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .pipeline-scroll { overflow-x: auto; padding-bottom: 4px; }
+  .pipeline { display: flex; flex-wrap: nowrap; min-width: min-content; }
+  .stage {
+    flex: 0 0 auto; min-width: 108px;
+    display: flex; flex-direction: column; gap: 3px;
+    padding: 12px 14px; margin-right: 28px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+  }
+  .stage:last-child { margin-right: 0; }
+  .stage:not(:last-child)::after {
+    content: "\2192"; position: absolute; right: -23px; top: 50%;
+    transform: translateY(-50%); color: var(--muted); font-size: 1.05rem;
+  }
+  .stage .s-name { font-weight: 600; font-size: 0.9rem; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+  .stage .s-meta { font-size: 0.72rem; color: var(--muted); line-height: 1.35; }
+  .stage.quality { border-color: rgba(74,222,128,0.32); }
+  .stage.deploy  { border-color: rgba(179,136,255,0.45); background: rgba(179,136,255,0.08); }
+
+  footer {
+    color: var(--muted);
+    margin-top: 80px; padding-top: 32px;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="topbar">
+  <a class="back" href="https://odwaz.github.io/">&larr; odwaz.github.io</a>
+  <span class="crumb">portfolio / <b>wallet-microservices</b></span>
+</nav>
+
+<header>
+  <p class="eyebrow">gateway<span class="sep">&rarr;</span>auth<span class="sep">&middot;</span>wallet<span class="sep">&middot;</span>transactions<span class="sep">&middot;</span>webhooks</p>
+  <h1>Wallet Microservices</h1>
+  <p class="thesis">
+    A distributed digital wallet platform &mdash; <strong>five Spring Boot services behind an API gateway</strong>,
+    fully reactive with WebFlux and R2DBC. OAuth2 + OTP authentication, wallet and transaction domains split into
+    independent services, and webhook notifications &mdash; shipped through a <strong>GitOps pipeline</strong> onto
+    Terraform-provisioned AWS.
+  </p>
+  <div class="meta-row">
+    <span class="pill hot">Java 17</span>
+    <span class="pill hot">Spring WebFlux</span>
+    <span class="pill hot">Microservices</span>
+    <span class="pill hot">ArgoCD GitOps</span>
+    <span class="pill">Solo project &mdash; services, infra, and pipeline</span>
+  </div>
+</header>
+
+<div class="topo-card">
+  <p class="topo-title">Service topology &mdash; stateless services, shared PostgreSQL with per-service isolation</p>
+  <div class="topo">
+    <div class="gateway">
+      <div class="g-name">api-gateway</div>
+      <div class="g-meta">single entry point &middot; routing &middot; JWT validation</div>
+    </div>
+    <div class="topo-links" aria-hidden="true"></div>
+    <div class="services">
+      <div class="svc"><span class="s-name">auth-service</span><span class="s-meta">OAuth2 grant types, OTP verification, JWT issue + refresh</span></div>
+      <div class="svc"><span class="s-name">wallet-service</span><span class="s-meta">wallet accounts, balances, holds</span></div>
+      <div class="svc"><span class="s-name">transaction-service</span><span class="s-meta">transfers and transaction history</span></div>
+      <div class="svc"><span class="s-name">webhook-service</span><span class="s-meta">event notifications to consumers</span></div>
+    </div>
+  </div>
+  <p class="topo-foot">shared-dtos <b>&#10003;</b> one contract module &mdash; no drift between service boundaries</p>
+</div>
+
+<h2>What it does</h2>
+<div class="grid">
+  <div class="feature">
+    <h3>oauth2 + otp auth</h3>
+    <p>Dedicated auth service issuing JWTs with expiration and validation, OAuth2 grant types, and one-time-password verification in the login flow.</p>
+  </div>
+  <div class="feature">
+    <h3>wallet domain</h3>
+    <p>Wallet and transaction concerns split into separate services, so value movement and account state scale and deploy independently.</p>
+  </div>
+  <div class="feature">
+    <h3>webhook notifications</h3>
+    <p>A dedicated service pushes wallet and transaction events to consumers &mdash; async patterns keep the core flow non-blocking.</p>
+  </div>
+  <div class="feature">
+    <h3>single entry point</h3>
+    <p>The API gateway owns routing and token validation, so services stay internal and the public surface stays small.</p>
+  </div>
+</div>
+
+<h2>Engineering highlights</h2>
+<p class="section-sub">The platform is as much about how it ships as what it serves.</p>
+
+<div class="hl">
+  <h3>GitOps delivery with ArgoCD</h3>
+  <p>GitLab CI/CD builds and tests; ArgoCD syncs the desired state from Git to the cluster. Conditional workflows skip unchanged services &mdash; measured ~80% faster pipelines.</p>
+</div>
+<div class="hl">
+  <h3>Infrastructure as code</h3>
+  <p>Terraform provisions the AWS footprint (ECR, ECS) &mdash; environments are reproducible, reviewable, and destroyable, with multi-environment deployment across dev, staging, and production.</p>
+</div>
+<div class="hl">
+  <h3>Security scanning in the pipeline</h3>
+  <p>Trivy scans images before they ship; configuration is environment-based with no hardcoded secrets; logging is scrubbed of sensitive data.</p>
+</div>
+<div class="hl">
+  <h3>Reactive, stateless services</h3>
+  <p>WebFlux + Project Reactor with R2DBC &mdash; non-blocking I/O for high concurrency, stateless services ready for horizontal scaling behind a load balancer.</p>
+</div>
+<div class="hl">
+  <h3>Fast, cache-aware builds</h3>
+  <p>Docker BuildKit multi-stage builds with layer caching &mdash; measured ~3&times; faster image builds &mdash; and SonarCloud quality gates on every merge.</p>
+</div>
+
+<h2>Tech stack</h2>
+<div class="stack-group">
+  <p class="stack-label">Core</p>
+  <div class="chips">
+    <span class="chip">Java 17</span><span class="chip">Spring Boot 3</span><span class="chip">Spring WebFlux</span><span class="chip">Project Reactor</span><span class="chip">R2DBC</span><span class="chip">PostgreSQL</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Security</p>
+  <div class="chips">
+    <span class="chip">OAuth2</span><span class="chip">JWT</span><span class="chip">OTP verification</span><span class="chip">Trivy image scanning</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Delivery &amp; infrastructure</p>
+  <div class="chips">
+    <span class="chip">GitLab CI/CD</span><span class="chip">ArgoCD (GitOps)</span><span class="chip">Terraform</span><span class="chip">AWS ECR / ECS</span><span class="chip">Docker BuildKit</span><span class="chip">Kubernetes manifests</span><span class="chip">SonarCloud</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Testing</p>
+  <div class="chips">
+    <span class="chip">JUnit 5</span><span class="chip">Mockito</span><span class="chip">WebTestClient</span>
+  </div>
+</div>
+
+<h2>How it ships</h2>
+<p class="section-sub">Provision once with Terraform, then every merge flows through the same gates to ArgoCD.</p>
+<div class="pipeline-scroll">
+  <div class="pipeline">
+    <div class="stage"><span class="s-name">terraform</span><span class="s-meta">IaC apply &middot; ECR / ECS</span></div>
+    <div class="stage"><span class="s-name">build + test</span><span class="s-meta">GitLab CI &middot; conditional per service</span></div>
+    <div class="stage quality"><span class="s-name">scan</span><span class="s-meta">Trivy + SonarCloud</span></div>
+    <div class="stage deploy"><span class="s-name">deploy</span><span class="s-meta">ArgoCD GitOps sync</span></div>
+  </div>
+</div>
+
+<footer>
+  <span>Wallet Microservices &mdash; designed &amp; built by <a href="https://odwaz.github.io/">Odwa Z</a></span>
+  <span>Source available on request &middot; <a href="mailto:odwadevwork@gmail.com">odwadevwork@gmail.com</a></span>
+</footer>
+
+</div>
+</body>
+</html>

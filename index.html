@@ -299,7 +299,7 @@
 </section>
 
 <h2>Featured Projects</h2>
-<p class="section-sub">Three systems I designed and built end-to-end. Each has a full write-up &mdash; architecture, decisions, and API surface.</p>
+<p class="section-sub">Three systems I designed and built end-to-end &mdash; architecture, decisions, and API surface covered in the write-ups.</p>
 
 <div class="grid">
 
@@ -320,10 +320,10 @@
   </div>
 
   <div class="card">
-    <h3><a href="https://odwaz.github.io/TippJaar/">TipJar <span class="icon">&#x2197;</span></a><span class="badge">write-up</span></h3>
-    <p class="sub">Creator donation &amp; wallet platform &mdash; campaigns, wallet-to-wallet value movement, KYC and admin controls. Provisioned on AWS with Terraform and containerised for Kubernetes.</p>
+    <h3><a href="https://odwaz.github.io/wallet-microservices/">Wallet Microservices <span class="icon">&#x2197;</span></a><span class="badge">write-up</span></h3>
+    <p class="sub">Distributed digital wallet platform &mdash; five Spring Boot services behind an API gateway (auth with OAuth2 + OTP, wallet, transactions, webhooks). Fully reactive, shipped via GitLab CI/CD with ArgoCD GitOps and Terraform-provisioned AWS.</p>
     <div class="chips">
-      <span class="chip good">Spring Boot</span><span class="chip good">Wallet ledger</span><span class="chip good">Spring Security / RBAC</span><span class="chip good">PostgreSQL</span><span class="chip good">Terraform / AWS</span><span class="chip good">Docker</span>
+      <span class="chip good">Spring WebFlux</span><span class="chip good">Microservices</span><span class="chip good">API Gateway</span><span class="chip good">OAuth2 + JWT</span><span class="chip good">R2DBC</span><span class="chip good">ArgoCD GitOps</span><span class="chip good">Terraform / AWS</span><span class="chip good">Trivy scanning</span>
     </div>
   </div>
 
@@ -352,15 +352,15 @@
 <div class="cicd-card">
   <div class="cicd-head">
     <span class="tool-badge terraform">Terraform &rarr; AWS</span>
-    <span class="who">TipJar</span>
-    &mdash; deployment pipeline provisioned as infrastructure-as-code
+    <span class="who">Wallet Microservices</span>
+    &mdash; GitOps delivery, infrastructure provisioned as code
   </div>
   <div class="pipeline-scroll">
     <div class="pipeline">
-      <div class="stage"><span class="s-name">terraform</span><span class="s-meta">IaC apply</span></div>
-      <div class="stage"><span class="s-name">CodePipeline</span><span class="s-meta">AWS orchestration</span></div>
-      <div class="stage"><span class="s-name">CodeBuild</span><span class="s-meta">build + test</span></div>
-      <div class="stage deploy"><span class="s-name">deploy</span><span class="s-meta">AWS</span></div>
+      <div class="stage"><span class="s-name">terraform</span><span class="s-meta">IaC apply (ECR / ECS)</span></div>
+      <div class="stage"><span class="s-name">build + test</span><span class="s-meta">GitLab CI/CD</span></div>
+      <div class="stage quality"><span class="s-name">scan</span><span class="s-meta">Trivy</span></div>
+      <div class="stage deploy"><span class="s-name">deploy</span><span class="s-meta">ArgoCD GitOps sync</span></div>
     </div>
   </div>
 </div>
@@ -377,10 +377,9 @@
 <h2>More on GitHub</h2>
 <p class="section-sub">
   Other backend work &mdash;
-  <a href="https://github.com/odwaz/online-spaza-microservices">online-spaza-microservices</a> (7 Kafka microservices on K8s),
-  <a href="https://github.com/odwaz/creator-platform">creator-platform</a> (Spring Cloud + OAuth2 authorization server),
-  and <a href="https://github.com/odwaz/wallet-microservices">wallet-microservices</a>.
-  Full list at <a href="https://github.com/odwaz">github.com/odwaz</a>.
+  <a href="https://odwaz.github.io/TippJaar/">TipJar</a> (creator donation &amp; wallet platform &mdash; full write-up)
+  and creator-platform (Spring Cloud + OAuth2 authorization server) &mdash; repos available on request.
+  Profile at <a href="https://github.com/odwaz">github.com/odwaz</a>.
 </p>
 
 <footer>
