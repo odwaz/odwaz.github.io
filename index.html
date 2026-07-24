@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Odwa Matiwane — Backend Engineer</title>
-<meta name="description" content="Backend engineer focused on reliable, scalable, secure Java/Spring systems. Portfolio of microservice and reactive projects.">
+<title>Odwa Matiwane — Backend &amp; DevOps Engineer</title>
+<meta name="description" content="Backend &amp; DevOps engineer — event-driven Java/Spring microservices, and the Terraform-provisioned AWS platform and CI/CD that ships them. Portfolio of build-and-run projects.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237aa2ff'/%3E%3Cstop offset='.5' stop-color='%23b388ff'/%3E%3Cstop offset='1' stop-color='%23f472b6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='32' fill='url(%23g)'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%230b1020'%3EOM%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -270,10 +270,11 @@
 
 <header>
   <div class="avatar">OM</div>
-  <h1>Odwa Matiwane<br>Backend Engineer</h1>
+  <h1>Odwa Matiwane<br>Backend &amp; DevOps Engineer</h1>
   <p class="tag">
-    I build <strong>event-driven microservices and REST APIs</strong> in Java / Spring Boot
-    reactive systems, Kafka pipelines, and fintech-grade data integrity.
+    I build <strong>event-driven microservices and REST APIs</strong> in Java / Spring Boot &mdash;
+    then <strong>provision and ship them on AWS</strong> with Terraform, Kubernetes, and CI/CD.
+    Two sides of one system: writing the services, and running the platform they live on.
   </p>
   <div class="links">
     <a href="https://github.com/odwaz">GitHub &rarr;</a>
@@ -331,7 +332,7 @@
 </div>
 
 <h2>CI/CD &amp; Cloud</h2>
-<p class="section-sub">How these ship &mdash; automated pipelines with quality gates, infrastructure as code, and container orchestration. The AWS platform underneath is provisioned from a dedicated <a href="https://odwaz.github.io/platform/">platform-infrastructure</a> repo.</p>
+<p class="section-sub">How these ship &mdash; automated pipelines with quality gates, infrastructure as code, and container orchestration. Each service is Terraform-provisioned and deployed to AWS its own way &mdash; see the <a href="https://odwaz.github.io/platform/">cloud deployments</a> write-up.</p>
 
 <div class="cicd-card">
   <div class="cicd-head">
@@ -380,10 +381,10 @@
 
 <div class="grid">
   <div class="card">
-    <h3><a href="https://odwaz.github.io/platform/">Platform Infrastructure <span class="icon">&#x2197;</span></a><span class="badge">write-up</span></h3>
-    <p class="sub">One Terraform repo provisioning the whole AWS estate &mdash; EKS on Fargate, RDS PostgreSQL Multi-AZ, Strimzi Kafka, per-service CodePipeline, and a Prometheus/Grafana stack. Eight reusable modules composed across dev/prod, with remote state in S3 and DynamoDB locking.</p>
+    <h3><a href="https://odwaz.github.io/platform/">Cloud Deployments <span class="icon">&#x2197;</span></a><span class="badge">write-up</span></h3>
+    <p class="sub">Three services, deployed three different ways &mdash; ArgoCD GitOps to EKS, Kubernetes manifests to EKS, and a Dockerized service on EC2. The only constants: every one is Terraform-provisioned and runs on AWS, behind a SonarCloud gate.</p>
     <div class="chips">
-      <span class="chip good">Terraform</span><span class="chip good">AWS EKS / Fargate</span><span class="chip good">RDS Multi-AZ</span><span class="chip good">Strimzi Kafka</span><span class="chip good">CodePipeline</span><span class="chip good">Prometheus + Grafana</span><span class="chip good">S3 / DynamoDB state</span><span class="chip good">Helm</span>
+      <span class="chip good">Terraform</span><span class="chip good">AWS</span><span class="chip good">Amazon EKS</span><span class="chip good">Amazon EC2</span><span class="chip good">ArgoCD GitOps</span><span class="chip good">GitLab CI/CD</span><span class="chip good">GitHub Actions</span><span class="chip good">SonarCloud</span>
     </div>
   </div>
 </div>

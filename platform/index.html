@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Platform Infrastructure — Terraform, EKS &amp; Observability on AWS | Odwa Matiwane</title>
-<meta name="description" content="One Terraform repo provisioning the whole AWS platform — EKS on Fargate, RDS PostgreSQL Multi-AZ, Strimzi Kafka, per-service CodePipeline, and Prometheus/Grafana — kept separate from application code.">
+<title>Cloud Deployments — Three services, three ways on AWS | Odwa Matiwane</title>
+<meta name="description" content="Three services deployed three different ways on AWS — ArgoCD GitOps to EKS, Kubernetes manifests to EKS, and a Dockerized Spring Boot app on EC2 — with the only common thread being Terraform-provisioned infrastructure on AWS.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='.5' stop-color='%2338bdf8'/%3E%3Cstop offset='1' stop-color='%237aa2ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='32' fill='url(%23g)'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%230b1020'%3EOM%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -69,7 +69,7 @@
     background-clip: text;
     color: transparent;
   }
-  .thesis { color: var(--muted); font-size: 1.1rem; max-width: 740px; margin: 0 0 22px; }
+  .thesis { color: var(--muted); font-size: 1.1rem; max-width: 760px; margin: 0 0 22px; }
   .thesis strong { color: var(--text); font-weight: 500; }
   .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
   .pill {
@@ -83,7 +83,7 @@
   .pill.hot { color: var(--accent); border-color: rgba(45,212,191,0.35); background: rgba(45,212,191,0.08); }
 
   h2 { font-size: 1.4rem; font-weight: 600; margin: 64px 0 8px; letter-spacing: -0.01em; }
-  .section-sub { color: var(--muted); margin: 0 0 24px; max-width: 740px; }
+  .section-sub { color: var(--muted); margin: 0 0 24px; max-width: 760px; }
 
   /* ---- Diagram cards ---- */
   .diagram-card {
@@ -108,7 +108,7 @@
   }
   .diagram-foot b { color: var(--good); font-weight: 600; }
 
-  /* ---- Features / modules ---- */
+  /* ---- Features / per-service ---- */
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -121,10 +121,17 @@
     padding: 18px 20px;
   }
   .feature h3 {
-    margin: 0 0 6px; font-size: 0.95rem; font-weight: 600;
+    margin: 0 0 4px; font-size: 0.95rem; font-weight: 600;
     font-family: 'JetBrains Mono', monospace;
     color: var(--accent);
   }
+  .feature .tgt {
+    display: inline-block; margin: 0 0 8px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+    letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px;
+  }
+  .feature .tgt.eks { color: var(--accent-2); background: rgba(56,189,248,0.09); border: 1px solid rgba(56,189,248,0.32); }
+  .feature .tgt.ec2 { color: var(--amber); background: rgba(251,191,36,0.09); border: 1px solid rgba(251,191,36,0.34); }
   .feature p { margin: 0; font-size: 0.86rem; color: var(--muted); line-height: 1.55; }
 
   /* ---- Highlights ---- */
@@ -158,20 +165,6 @@
     margin: 0 0 8px; letter-spacing: 0.02em;
   }
   .code-label b { color: var(--text); font-weight: 600; }
-
-  /* ---- Env comparison ---- */
-  .env-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 8px; }
-  .env {
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 14px; padding: 18px 20px;
-  }
-  .env h3 { margin: 0 0 12px; font-size: 0.9rem; font-family: 'JetBrains Mono', monospace; }
-  .env.dev h3 { color: var(--accent-2); }
-  .env.prod h3 { color: var(--accent); }
-  .env ul { margin: 0; padding: 0; list-style: none; }
-  .env li { font-size: 0.84rem; color: var(--muted); padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.06); }
-  .env li:last-child { border-bottom: 0; }
-  .env li b { color: var(--text); font-weight: 500; }
 
   /* ---- Stack ---- */
   .stack-group { margin-bottom: 18px; }
@@ -225,155 +218,153 @@
 
 <nav class="topbar">
   <a class="back" href="https://odwaz.github.io/">&larr; odwaz.github.io</a>
-  <span class="crumb">portfolio / <b>platform-infrastructure</b></span>
+  <span class="crumb">portfolio / <b>cloud-deployments</b></span>
 </nav>
 
 <header>
-  <p class="eyebrow">terraform<span class="sep">&rarr;</span>eks<span class="sep">&middot;</span>rds<span class="sep">&middot;</span>kafka<span class="sep">&middot;</span>observability</p>
-  <h1>Platform Infrastructure</h1>
+  <p class="eyebrow">terraform<span class="sep">&middot;</span>aws<span class="sep">&rarr;</span>three services, three ways</p>
+  <h1>Cloud Deployments</h1>
   <p class="thesis">
-    <strong>One Terraform repo that provisions the entire AWS platform</strong> &mdash; EKS on Fargate,
-    RDS PostgreSQL Multi-AZ, Strimzi Kafka, per-service CI/CD, and a Prometheus/Grafana observability
-    stack &mdash; deliberately kept <strong>separate from the application code</strong>. Eight reusable modules,
-    composed per environment, with remote state in S3 and DynamoDB locking.
+    Three services, deployed <strong>three genuinely different ways</strong> &mdash; GitOps to Kubernetes,
+    raw manifests to Kubernetes, and a container on a plain VM. The <strong>only</strong> things they share are that
+    every one is <strong>provisioned with Terraform</strong> and runs on <strong>AWS</strong>. Beyond that, each
+    has its own CI system, its own delivery model, and its own compute target.
   </p>
   <div class="meta-row">
     <span class="pill hot">Terraform</span>
-    <span class="pill hot">AWS EKS / Fargate</span>
-    <span class="pill hot">Strimzi Kafka</span>
-    <span class="pill hot">Prometheus + Grafana</span>
-    <span class="pill">af-south-1 &middot; dev / prod</span>
+    <span class="pill hot">AWS</span>
+    <span class="pill hot">EKS + EC2</span>
+    <span class="pill hot">ArgoCD &middot; kubectl &middot; Docker</span>
+    <span class="pill">GitLab CI/CD &amp; GitHub Actions</span>
   </div>
 </header>
 
 <div class="diagram-card">
-  <p class="diagram-title">Platform architecture &mdash; Route 53 &rarr; ALB &rarr; EKS/Fargate, backed by RDS &amp; Kafka</p>
-  <svg class="diagram-svg" viewBox="0 0 940 432" width="100%" height="auto" role="img"
-       aria-label="Route 53 routes through an ALB with ACM/HTTPS into an EKS cluster on Fargate running wallet-microservices, real-time-cdp and sme-directory, plus Strimzi Kafka and the kube-prometheus-stack; RDS PostgreSQL Multi-AZ, ECR image registries, and S3 with DynamoDB state sit alongside."
+  <p class="diagram-title">Deployed three ways &mdash; only Terraform &amp; AWS are shared</p>
+  <svg class="diagram-svg" viewBox="0 0 940 292" width="100%" height="auto" role="img"
+       aria-label="Three deployment lanes. wallet-microservices: GitLab CI/CD and SonarCloud, delivered by ArgoCD GitOps to Amazon EKS. real-time-cdp: GitLab CI and SonarCloud, delivered by kubectl manifests to Amazon EKS with Kafka. sme-directory: GitHub Actions and SonarCloud, packaged as a Docker image in ECR and run as a container on Amazon EC2 with RDS. All three are provisioned by Terraform on AWS."
        font-family="Inter, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
     <defs>
-      <marker id="pArr" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
+      <marker id="dArr" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
         <path d="M0,0 L9,4 L0,8 Z" fill="#2dd4bf"/>
       </marker>
     </defs>
 
-    <!-- entry: Route 53 -> ALB -->
-    <rect x="30" y="22" width="170" height="52" rx="10" fill="#38bdf8" fill-opacity="0.08" stroke="#38bdf8" stroke-opacity="0.4"/>
-    <text x="115" y="45" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="12.5" fill="#38bdf8">Route 53</text>
-    <text x="115" y="62" text-anchor="middle" font-size="9.5" fill="#9aa4b8">DNS &#183; public zone</text>
-
-    <line x1="200" y1="48" x2="246" y2="48" stroke="#2dd4bf" stroke-opacity="0.6" stroke-width="1.6" marker-end="url(#pArr)"/>
-
-    <rect x="250" y="22" width="230" height="52" rx="10" fill="#38bdf8" fill-opacity="0.08" stroke="#38bdf8" stroke-opacity="0.4"/>
-    <text x="365" y="45" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="12.5" fill="#38bdf8">Application Load Balancer</text>
-    <text x="365" y="62" text-anchor="middle" font-size="9.5" fill="#9aa4b8">ACM certificate &#183; HTTPS</text>
-
-    <!-- ALB down into cluster + bus to services -->
-    <line x1="365" y1="74" x2="365" y2="140" stroke="#2dd4bf" stroke-opacity="0.6" stroke-width="1.6"/>
-    <line x1="142" y1="140" x2="542" y2="140" stroke="#2dd4bf" stroke-opacity="0.5" stroke-width="1.6"/>
-    <g stroke="#2dd4bf" stroke-opacity="0.6" stroke-width="1.6" marker-end="url(#pArr)">
-      <line x1="142" y1="140" x2="142" y2="158"/>
-      <line x1="342" y1="140" x2="342" y2="158"/>
-      <line x1="542" y1="140" x2="542" y2="158"/>
+    <!-- column headers -->
+    <g font-family="'JetBrains Mono', ui-monospace, monospace" font-size="9" fill="#9aa4b8" text-anchor="middle" letter-spacing="0.5">
+      <text x="91"  y="34">SERVICE</text>
+      <text x="285" y="34">CI + QUALITY</text>
+      <text x="515" y="34">DELIVERY</text>
+      <text x="792" y="34">AWS TARGET</text>
     </g>
 
-    <!-- EKS cluster container -->
-    <rect x="30" y="110" width="632" height="300" rx="14" fill="#2dd4bf" fill-opacity="0.03" stroke="#2dd4bf" stroke-opacity="0.38" stroke-dasharray="6 5"/>
-    <text x="46" y="130" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11" fill="#2dd4bf">Amazon EKS &#183; Fargate profiles &#183; af-south-1 &#183; k8s 1.29</text>
+    <!-- flow arrows -->
+    <g stroke="#2dd4bf" stroke-opacity="0.55" stroke-width="1.6" marker-end="url(#dArr)">
+      <line x1="176" y1="76"  x2="189" y2="76"/>
+      <line x1="380" y1="76"  x2="419" y2="76"/>
+      <line x1="610" y1="76"  x2="649" y2="76"/>
+      <line x1="176" y1="158" x2="189" y2="158"/>
+      <line x1="380" y1="158" x2="419" y2="158"/>
+      <line x1="610" y1="158" x2="649" y2="158"/>
+      <line x1="176" y1="240" x2="189" y2="240"/>
+      <line x1="380" y1="240" x2="419" y2="240"/>
+      <line x1="610" y1="240" x2="649" y2="240"/>
+    </g>
 
-    <!-- service pods -->
+    <!-- ===== service label boxes ===== -->
     <g>
-      <rect x="48"  y="160" width="188" height="66" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
-      <rect x="248" y="160" width="188" height="66" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
-      <rect x="448" y="160" width="188" height="66" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect x="6" y="46"  width="170" height="60" rx="10" fill="#2dd4bf" fill-opacity="0.06" stroke="#2dd4bf" stroke-opacity="0.32"/>
+      <rect x="6" y="128" width="170" height="60" rx="10" fill="#2dd4bf" fill-opacity="0.06" stroke="#2dd4bf" stroke-opacity="0.32"/>
+      <rect x="6" y="210" width="170" height="60" rx="10" fill="#2dd4bf" fill-opacity="0.06" stroke="#2dd4bf" stroke-opacity="0.32"/>
     </g>
-    <g font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11.5" fill="#f1f5fb">
-      <text x="142" y="190" text-anchor="middle">wallet-microservices</text>
-      <text x="342" y="190" text-anchor="middle">real-time-cdp</text>
-      <text x="542" y="190" text-anchor="middle">sme-directory</text>
+    <g text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="10.5" fill="#2dd4bf">
+      <text x="91" y="72">wallet-microservices</text>
+      <text x="91" y="154">real-time-cdp</text>
+      <text x="91" y="236">sme-directory</text>
     </g>
-    <g font-size="9.5" fill="#9aa4b8" text-anchor="middle">
-      <text x="142" y="208">wallet &amp; payments</text>
-      <text x="342" y="208">Gimba CDP</text>
-      <text x="542" y="208">trust &amp; discovery</text>
+    <g text-anchor="middle" font-size="8.5" fill="#4ade80">
+      <text x="91" y="90">Terraform &#183; AWS</text>
+      <text x="91" y="172">Terraform &#183; AWS</text>
+      <text x="91" y="254">Terraform &#183; AWS</text>
     </g>
 
-    <!-- platform pods: kafka + monitoring -->
-    <rect x="48" y="258" width="286" height="72" rx="10" fill="#fbbf24" fill-opacity="0.06" stroke="#fbbf24" stroke-opacity="0.4"/>
-    <text x="191" y="288" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11.5" fill="#fbbf24">Strimzi Kafka</text>
-    <text x="191" y="306" text-anchor="middle" font-size="9.5" fill="#9aa4b8">KRaft &#183; 3 brokers (1 in dev)</text>
+    <!-- ===== CI + quality boxes ===== -->
+    <g>
+      <rect x="190" y="46"  width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect x="190" y="128" width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect x="190" y="210" width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
+    </g>
+    <g text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11" fill="#f1f5fb">
+      <text x="285" y="72">GitLab CI/CD</text>
+      <text x="285" y="154">GitLab CI</text>
+      <text x="285" y="236">GitHub Actions</text>
+    </g>
+    <g text-anchor="middle" font-size="9" fill="#9aa4b8">
+      <text x="285" y="90">SonarCloud gate</text>
+      <text x="285" y="172">SonarCloud gate</text>
+      <text x="285" y="254">SonarCloud gate</text>
+    </g>
 
-    <rect x="350" y="258" width="286" height="72" rx="10" fill="#4ade80" fill-opacity="0.06" stroke="#4ade80" stroke-opacity="0.36"/>
-    <text x="493" y="288" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11.5" fill="#4ade80">kube-prometheus-stack</text>
-    <text x="493" y="306" text-anchor="middle" font-size="9.5" fill="#9aa4b8">Prometheus &#183; Grafana</text>
+    <!-- ===== delivery boxes ===== -->
+    <g>
+      <rect x="420" y="46"  width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect x="420" y="128" width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect x="420" y="210" width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
+    </g>
+    <g text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11" fill="#f1f5fb">
+      <text x="515" y="72">ArgoCD GitOps</text>
+      <text x="515" y="154">kubectl manifests</text>
+      <text x="515" y="236">Docker image</text>
+    </g>
+    <g text-anchor="middle" font-size="9" fill="#9aa4b8">
+      <text x="515" y="90">pull-based sync</text>
+      <text x="515" y="172">push apply</text>
+      <text x="515" y="254">jar &#8594; ECR image</text>
+    </g>
 
-    <!-- services -> kafka (produce/consume) -->
-    <line x1="300" y1="226" x2="220" y2="258" stroke="#fbbf24" stroke-opacity="0.5" stroke-width="1.4" stroke-dasharray="4 3"/>
-
-    <!-- right column: data + registries -->
-    <rect x="700" y="150" width="210" height="78" rx="11" fill="#38bdf8" fill-opacity="0.07" stroke="#38bdf8" stroke-opacity="0.4"/>
-    <text x="805" y="180" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="12" fill="#38bdf8">RDS PostgreSQL</text>
-    <text x="805" y="198" text-anchor="middle" font-size="9.5" fill="#9aa4b8">Multi-AZ &#183; private subnets</text>
-
-    <rect x="700" y="244" width="210" height="64" rx="11" fill="#2dd4bf" fill-opacity="0.06" stroke="#2dd4bf" stroke-opacity="0.36"/>
-    <text x="805" y="272" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="12" fill="#2dd4bf">ECR &#215;3</text>
-    <text x="805" y="290" text-anchor="middle" font-size="9.5" fill="#9aa4b8">container image registries</text>
-
-    <rect x="700" y="324" width="210" height="64" rx="11" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.14"/>
-    <text x="805" y="352" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="12" fill="#f1f5fb">S3 + DynamoDB</text>
-    <text x="805" y="370" text-anchor="middle" font-size="9.5" fill="#9aa4b8">Terraform state &#183; locking</text>
-
-    <!-- service -> RDS -->
-    <line x1="636" y1="188" x2="698" y2="188" stroke="#2dd4bf" stroke-opacity="0.6" stroke-width="1.6" marker-end="url(#pArr)"/>
-    <text x="667" y="181" text-anchor="middle" font-size="8.5" fill="#9aa4b8">JDBC</text>
-    <!-- ECR -> cluster (image pull, points left) -->
-    <line x1="700" y1="276" x2="662" y2="276" stroke="#2dd4bf" stroke-opacity="0.6" stroke-width="1.6" marker-end="url(#pArr)"/>
+    <!-- ===== AWS target boxes ===== -->
+    <rect x="650" y="46"  width="284" height="60" rx="10" fill="#38bdf8" fill-opacity="0.08" stroke="#38bdf8" stroke-opacity="0.4"/>
+    <rect x="650" y="128" width="284" height="60" rx="10" fill="#38bdf8" fill-opacity="0.08" stroke="#38bdf8" stroke-opacity="0.4"/>
+    <rect x="650" y="210" width="284" height="60" rx="10" fill="#fbbf24" fill-opacity="0.08" stroke="#fbbf24" stroke-opacity="0.42"/>
+    <g text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11.5">
+      <text x="792" y="72"  fill="#38bdf8">Amazon EKS</text>
+      <text x="792" y="154" fill="#38bdf8">Amazon EKS</text>
+      <text x="792" y="236" fill="#fbbf24">Amazon EC2</text>
+    </g>
+    <g text-anchor="middle" font-size="9" fill="#9aa4b8">
+      <text x="792" y="90">containers &#183; ECR images</text>
+      <text x="792" y="172">Kubernetes &#183; Apache Kafka</text>
+      <text x="792" y="254">Docker container &#183; RDS</text>
+    </g>
   </svg>
-  <p class="diagram-foot">infra repo <b>&#10003;</b> provisioned by Terraform &mdash; the application code lives in its own repos and rolls out on top</p>
+  <p class="diagram-foot">common thread <b>&#10003;</b> every service is Terraform-provisioned, on AWS, behind a SonarCloud gate &mdash; everything else differs on purpose</p>
 </div>
 
-<h2>What it provisions</h2>
-<p class="section-sub">Eight reusable modules under <code class="mono">modules/</code>, composed per environment in <code class="mono">environments/dev</code> and <code class="mono">environments/prod</code>.</p>
+<h2>Deployed three ways</h2>
+<p class="section-sub">Same discipline &mdash; infrastructure as code, a quality gate, a repeatable pipeline &mdash; expressed through three different delivery models and two different compute services.</p>
 <div class="grid">
   <div class="feature">
-    <h3>networking</h3>
-    <p>VPC across two AZs &mdash; public/private subnets, route tables, and NAT gateways (single NAT in dev to save cost, per-AZ in prod).</p>
+    <h3>wallet-microservices</h3>
+    <span class="tgt eks">EKS &middot; GitOps</span>
+    <p>GitLab CI/CD builds the service images to ECR and updates the Git desired-state. <b>ArgoCD</b> watches that repo and syncs it onto <b>Amazon EKS</b> &mdash; pull-based GitOps, so the pipeline never holds cluster-admin credentials.</p>
   </div>
   <div class="feature">
-    <h3>eks</h3>
-    <p>EKS cluster on <b>Fargate profiles</b> (k8s 1.29) &mdash; no node groups to patch. Namespaces for the services, Kafka, and monitoring.</p>
+    <h3>real-time-cdp <span style="color:var(--muted);font-weight:400">(Gimba)</span></h3>
+    <span class="tgt eks">EKS &middot; manifests</span>
+    <p>GitLab CI runs the build and the SonarCloud gate, then applies <b>Kubernetes manifests</b> directly with <code>kubectl</code>. The event-driven CDP runs on <b>Amazon EKS</b> alongside its <b>Apache Kafka</b>.</p>
   </div>
   <div class="feature">
-    <h3>rds</h3>
-    <p>PostgreSQL in private subnets &mdash; single-AZ <code class="mono">db.t3.micro</code> in dev, <b>Multi-AZ</b> <code class="mono">db.r6g.large</code> in prod.</p>
-  </div>
-  <div class="feature">
-    <h3>kafka</h3>
-    <p>Strimzi operator installed via Helm; a KRaft-mode Kafka cluster (single broker in dev, three in prod) for the event-driven services.</p>
-  </div>
-  <div class="feature">
-    <h3>ecr</h3>
-    <p>Three container registries &mdash; one per service &mdash; that the pipelines push images to and EKS pulls from.</p>
-  </div>
-  <div class="feature">
-    <h3>monitoring</h3>
-    <p>kube-prometheus-stack via Helm &mdash; Prometheus scraping workloads and Grafana dashboards, with an admin password injected as a variable.</p>
-  </div>
-  <div class="feature">
-    <h3>pipeline</h3>
-    <p>Per-service CodePipeline + CodeBuild, wired to GitHub through a CodeStar connection &mdash; source, build, push to ECR, deploy to EKS.</p>
-  </div>
-  <div class="feature">
-    <h3>dns</h3>
-    <p>Route 53 records and ACM certificates fronting the ALB, so services are reachable over HTTPS on real hostnames.</p>
+    <h3>sme-directory</h3>
+    <span class="tgt ec2">EC2 &middot; Docker</span>
+    <p><b>GitHub Actions</b> builds the Spring Boot jar, gates it with SonarCloud, and packages it as a <b>Docker image in ECR</b> &mdash; then runs that container on an <b>Amazon EC2</b> instance backed by RDS. Containerized, but without a Kubernetes control plane.</p>
   </div>
 </div>
 
-<h2>Infrastructure as code &amp; state</h2>
-<p class="section-sub">Environments are thin compositions of the modules; state is remote, encrypted, and locked so applies are safe to run from anywhere.</p>
+<h2>The common thread &mdash; IaC on AWS</h2>
+<p class="section-sub">Whatever the runtime, the AWS footprint under each service is defined in Terraform, with state kept remote, encrypted, and locked so an <code class="mono">apply</code> is safe to run from anywhere.</p>
 
-<p class="code-label"><b>backend.tf</b> &mdash; remote state on S3 with DynamoDB locking (bootstrapped per environment)</p>
-<pre class="tf"><span class="c"># Remote state configuration — S3 + DynamoDB locking.</span>
+<p class="code-label"><b>backend.tf</b> &mdash; remote state on S3 with DynamoDB locking</p>
+<pre class="tf"><span class="c"># Remote state — S3 backend, DynamoDB locking, per-environment key.</span>
 terraform {
   backend <span class="s">"s3"</span> {
     bucket         = <span class="s">"gimba-terraform-state"</span>
@@ -384,180 +375,48 @@ terraform {
   }
 }</pre>
 
-<p class="code-label"><b>environments/dev/main.tf</b> &mdash; modules composed for one environment (excerpt)</p>
-<pre class="tf"><span class="k">module</span> <span class="s">"eks"</span> {
-  source          = <span class="s">"../../modules/eks"</span>
-  project         = var.project
-  environment     = var.environment
-  cluster_version = <span class="s">"1.29"</span>       <span class="c"># Fargate: default, kafka, monitoring namespaces</span>
-}
-
-<span class="k">module</span> <span class="s">"pipeline"</span> {
-  source                  = <span class="s">"../../modules/pipeline"</span>
-  for_each                = var.services   <span class="c"># wallet-microservices, real-time-cdp, sme-directory</span>
-  repository              = each.value.repo
-  branch                  = each.value.branch
-  codestar_connection_arn = var.codestar_connection_arn
-}</pre>
-
-<div class="diagram-card">
-  <p class="diagram-title">CI/CD &mdash; per-service CodePipeline, source to EKS</p>
-  <svg class="diagram-svg" viewBox="0 0 940 176" width="100%" height="auto" role="img"
-       aria-label="Each service has a CodePipeline: GitHub source via CodeStar connection, CodeBuild builds and pushes a Docker image to ECR, then EKS rolls it out. Infrastructure itself is applied on a separate Terraform track with state in S3 and DynamoDB."
-       font-family="Inter, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
-    <defs>
-      <marker id="cArr" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
-        <path d="M0,0 L9,4 L0,8 Z" fill="#38bdf8"/>
-      </marker>
-    </defs>
-    <g stroke="#38bdf8" stroke-opacity="0.6" stroke-width="1.6" marker-end="url(#cArr)">
-      <line x1="176" y1="61" x2="205" y2="61"/>
-      <line x1="367" y1="61" x2="396" y2="61"/>
-      <line x1="558" y1="61" x2="587" y2="61"/>
-      <line x1="749" y1="61" x2="778" y2="61"/>
-    </g>
-    <g>
-      <rect x="20"  y="30" width="156" height="62" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
-      <rect x="211" y="30" width="156" height="62" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
-      <rect x="402" y="30" width="156" height="62" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
-      <rect x="593" y="30" width="156" height="62" rx="10" fill="#fbbf24" fill-opacity="0.06" stroke="#fbbf24" stroke-opacity="0.4"/>
-      <rect x="784" y="30" width="156" height="62" rx="10" fill="#2dd4bf" fill-opacity="0.07" stroke="#2dd4bf" stroke-opacity="0.42"/>
-    </g>
-    <g font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11.5" text-anchor="middle">
-      <text x="98"  y="58" fill="#f1f5fb">GitHub</text>
-      <text x="289" y="58" fill="#f1f5fb">CodePipeline</text>
-      <text x="480" y="58" fill="#f1f5fb">CodeBuild</text>
-      <text x="671" y="58" fill="#fbbf24">ECR</text>
-      <text x="862" y="58" fill="#2dd4bf">EKS</text>
-    </g>
-    <g font-size="9.5" fill="#9aa4b8" text-anchor="middle">
-      <text x="98"  y="76">source &#183; CodeStar</text>
-      <text x="289" y="76">orchestrates stages</text>
-      <text x="480" y="76">docker build</text>
-      <text x="671" y="76">push image</text>
-      <text x="862" y="76">rollout</text>
-    </g>
-    <line x1="20" y1="120" x2="920" y2="120" stroke="#ffffff" stroke-opacity="0.10" stroke-width="1" stroke-dasharray="4 4"/>
-    <text x="20" y="146" font-size="10.5" fill="#9aa4b8">Infra track &#8212; <tspan fill="#2dd4bf">terraform plan &#8594; apply</tspan>, state in S3 + DynamoDB lock, run separately from the app pipelines.</text>
-  </svg>
-</div>
-
-<div class="diagram-card">
-  <p class="diagram-title">Observability &mdash; metrics, dashboards, and logs</p>
-  <svg class="diagram-svg" viewBox="0 0 940 210" width="100%" height="auto" role="img"
-       aria-label="Prometheus scrapes /metrics from the EKS workloads and stores them; Grafana renders dashboards and alerts on top; CloudWatch Logs captures control-plane and application logs."
-       font-family="Inter, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
-    <defs>
-      <marker id="oArr" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
-        <path d="M0,0 L9,4 L0,8 Z" fill="#4ade80"/>
-      </marker>
-    </defs>
-    <g stroke="#4ade80" stroke-opacity="0.6" stroke-width="1.6" marker-end="url(#oArr)">
-      <line x1="270" y1="70" x2="309" y2="70"/>
-      <line x1="540" y1="70" x2="579" y2="70"/>
-    </g>
-    <rect x="40"  y="38" width="230" height="64" rx="11" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
-    <rect x="310" y="38" width="230" height="64" rx="11" fill="#4ade80" fill-opacity="0.06" stroke="#4ade80" stroke-opacity="0.36"/>
-    <rect x="580" y="38" width="230" height="64" rx="11" fill="#4ade80" fill-opacity="0.06" stroke="#4ade80" stroke-opacity="0.36"/>
-    <g font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="12" text-anchor="middle">
-      <text x="155" y="66" fill="#f1f5fb">EKS workloads</text>
-      <text x="425" y="66" fill="#4ade80">Prometheus</text>
-      <text x="695" y="66" fill="#4ade80">Grafana</text>
-    </g>
-    <g font-size="9.5" fill="#9aa4b8" text-anchor="middle">
-      <text x="155" y="84">expose /metrics</text>
-      <text x="425" y="84">scrape &#183; TSDB</text>
-      <text x="695" y="84">dashboards &#183; alerts</text>
-    </g>
-    <text x="290" y="62" text-anchor="middle" font-size="8.5" fill="#9aa4b8">scrape</text>
-
-    <!-- logs -->
-    <line x1="155" y1="102" x2="155" y2="150" stroke="#9aa4b8" stroke-opacity="0.5" stroke-width="1.4" marker-end="url(#oArr)"/>
-    <rect x="40" y="150" width="500" height="44" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.12"/>
-    <text x="60" y="177" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11" fill="#f1f5fb">CloudWatch Logs</text>
-    <text x="200" y="177" font-size="9.5" fill="#9aa4b8">control-plane + application logs</text>
-  </svg>
-</div>
-
-<h2>Engineering highlights</h2>
-<p class="section-sub">The point of the repo is a platform you can stand up, reason about, and tear down &mdash; reproducibly.</p>
-
 <div class="hl">
-  <h3>Infrastructure separated from application code</h3>
-  <p>All AWS provisioning lives in this one repo, not inside the services. Infra changes and app deploys move on their own cadence, with their own review and their own credentials &mdash; the app pipelines never hold cluster-admin rights.</p>
+  <h3>One toolchain philosophy, three targets</h3>
+  <p>Each service still gets the same treatment &mdash; a version-controlled pipeline, a SonarCloud quality gate, and Terraform-defined infrastructure &mdash; but the delivery model is matched to the workload: GitOps where the cluster should self-heal, plain manifests where a direct apply is simplest, and a container on a VM where a full Kubernetes control plane would be overkill.</p>
 </div>
 <div class="hl">
-  <h3>Remote, locked Terraform state</h3>
-  <p>State is stored in an S3 bucket with <code>encrypt = true</code> and a DynamoDB lock table, keyed by environment path &mdash; safe concurrent applies and no state on a laptop.</p>
-</div>
-<div class="hl">
-  <h3>Serverless Kubernetes with Fargate</h3>
-  <p>EKS runs on Fargate profiles, so there are no worker nodes to patch or scale &mdash; the cluster schedules pods onto managed capacity across the service, Kafka, and monitoring namespaces.</p>
-</div>
-<div class="hl">
-  <h3>Kafka and monitoring as Helm-managed platform services</h3>
-  <p>Strimzi (KRaft-mode Kafka) and the kube-prometheus-stack are installed through the Helm provider from Terraform &mdash; the messaging backbone and the observability stack are part of the same reproducible apply.</p>
-</div>
-<div class="hl">
-  <h3>Cost-aware environments</h3>
-  <p>Dev trades away HA for cost &mdash; a single NAT gateway, single-AZ <code>db.t3.micro</code>, one Kafka broker &mdash; while prod turns on Multi-AZ RDS, <code>db.r6g.large</code>, and three brokers. Same modules, different variables.</p>
-</div>
-
-<h2>Environments</h2>
-<div class="env-grid">
-  <div class="env dev">
-    <h3>dev &mdash; cost-optimized</h3>
-    <ul>
-      <li>NAT gateway: <b>single</b></li>
-      <li>RDS: <b>db.t3.micro</b> &middot; single-AZ</li>
-      <li>Kafka: <b>1 broker</b> &middot; no persistence</li>
-      <li>Compute: <b>EKS Fargate</b></li>
-    </ul>
-  </div>
-  <div class="env prod">
-    <h3>prod &mdash; highly available</h3>
-    <ul>
-      <li>NAT gateway: <b>per-AZ</b></li>
-      <li>RDS: <b>db.r6g.large</b> &middot; Multi-AZ</li>
-      <li>Kafka: <b>3 brokers</b> &middot; persistent</li>
-      <li>Compute: <b>EKS Fargate</b></li>
-    </ul>
-  </div>
+  <h3>Least-privilege delivery</h3>
+  <p>The GitOps path (ArgoCD) means the wallet pipeline never holds cluster credentials &mdash; it writes desired state to Git and the cluster pulls. The EC2 path pulls a container image from ECR onto the host. Different trust models, each scoped to what that deployment actually needs.</p>
 </div>
 
 <h2>Tech stack</h2>
 <div class="stack-group">
-  <p class="stack-label">Infrastructure as code</p>
+  <p class="stack-label">CI/CD &amp; delivery</p>
   <div class="chips">
-    <span class="chip">Terraform &ge; 1.5</span><span class="chip">HCL modules</span><span class="chip">S3 remote state</span><span class="chip">DynamoDB locking</span><span class="chip">Helm provider</span>
+    <span class="chip">GitLab CI/CD</span><span class="chip">GitHub Actions</span><span class="chip">ArgoCD (GitOps)</span><span class="chip">kubectl</span><span class="chip">SonarCloud</span>
   </div>
 </div>
 <div class="stack-group">
   <p class="stack-label">AWS</p>
   <div class="chips">
-    <span class="chip">EKS / Fargate</span><span class="chip">RDS PostgreSQL</span><span class="chip">ECR</span><span class="chip">ALB + ACM</span><span class="chip">Route 53</span><span class="chip">S3</span><span class="chip">CodePipeline / CodeBuild</span><span class="chip">CloudWatch</span>
+    <span class="chip">Amazon EKS</span><span class="chip">Amazon EC2</span><span class="chip">ECR</span><span class="chip">RDS</span><span class="chip">ALB + ACM</span><span class="chip">Route 53</span><span class="chip">S3</span><span class="chip">CloudWatch</span>
   </div>
 </div>
 <div class="stack-group">
-  <p class="stack-label">Kubernetes &amp; platform</p>
+  <p class="stack-label">Infrastructure as code</p>
   <div class="chips">
-    <span class="chip">Strimzi Kafka (KRaft)</span><span class="chip">kube-prometheus-stack</span><span class="chip">Prometheus</span><span class="chip">Grafana</span><span class="chip">kubectl / Helm 3</span>
+    <span class="chip">Terraform &ge; 1.5</span><span class="chip">HCL modules</span><span class="chip">S3 remote state</span><span class="chip">DynamoDB locking</span>
   </div>
 </div>
 
 <h2>How it ships</h2>
-<p class="section-sub">Bootstrap state once, then <code class="mono">plan</code> and <code class="mono">apply</code> per environment; application images flow through their own per-service pipelines onto the cluster.</p>
+<p class="section-sub">The shape is the same everywhere; the last stage is what differs.</p>
 <div class="pipeline-scroll">
   <div class="pipeline">
-    <div class="stage"><span class="s-name">init</span><span class="s-meta">S3 backend + providers</span></div>
-    <div class="stage quality"><span class="s-name">plan</span><span class="s-meta">terraform plan -out</span></div>
-    <div class="stage deploy"><span class="s-name">apply</span><span class="s-meta">EKS &middot; RDS &middot; Kafka &middot; monitoring</span></div>
-    <div class="stage"><span class="s-name">ship apps</span><span class="s-meta">CodePipeline &rarr; EKS</span></div>
+    <div class="stage"><span class="s-name">terraform</span><span class="s-meta">provision AWS &middot; remote state</span></div>
+    <div class="stage"><span class="s-name">ci</span><span class="s-meta">GitLab CI / GitHub Actions</span></div>
+    <div class="stage quality"><span class="s-name">gate</span><span class="s-meta">SonarCloud</span></div>
+    <div class="stage deploy"><span class="s-name">deliver</span><span class="s-meta">ArgoCD / kubectl / jar &rarr; EKS &middot; EC2</span></div>
   </div>
 </div>
 
 <footer>
-  <span>Platform Infrastructure &mdash; designed &amp; built by <a href="https://odwaz.github.io/">Odwa Matiwane</a></span>
+  <span>Cloud Deployments &mdash; designed &amp; built by <a href="https://odwaz.github.io/">Odwa Matiwane</a></span>
   <span>Source available on request &middot; <a href="mailto:odwadevwork@gmail.com">odwadevwork@gmail.com</a></span>
 </footer>
 
