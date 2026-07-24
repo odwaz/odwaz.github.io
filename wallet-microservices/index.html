@@ -98,47 +98,7 @@
     text-transform: uppercase; letter-spacing: 0.08em;
     margin: 0 0 20px;
   }
-  .topo {
-    display: grid;
-    grid-template-columns: minmax(130px, 170px) 34px 1fr;
-    align-items: center;
-    gap: 0;
-  }
-  .gateway {
-    padding: 18px 16px;
-    background: rgba(179,136,255,0.1);
-    border: 1px solid rgba(179,136,255,0.45);
-    border-radius: 12px;
-    text-align: center;
-  }
-  .gateway .g-name { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.9rem; color: var(--accent); }
-  .gateway .g-meta { font-size: 0.68rem; color: var(--muted); margin-top: 3px; line-height: 1.4; }
-  .topo-links { position: relative; height: 100%; min-height: 220px; }
-  .topo-links::before {
-    content: ""; position: absolute; left: 0; top: 50%; width: 100%; height: 1px;
-    background: var(--border-strong);
-  }
-  .topo-links::after {
-    content: ""; position: absolute; right: 0; top: 9%; bottom: 9%; width: 1px;
-    background: var(--border-strong);
-  }
-  .services { display: flex; flex-direction: column; gap: 10px; }
-  .svc {
-    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
-    padding: 11px 16px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    position: relative;
-    transition: border-color 0.15s;
-  }
-  .svc:hover { border-color: rgba(179,136,255,0.5); }
-  .svc::before {
-    content: ""; position: absolute; left: -14px; top: 50%; width: 14px; height: 1px;
-    background: var(--border-strong);
-  }
-  .svc .s-name { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.85rem; color: var(--text); }
-  .svc .s-meta { font-size: 0.74rem; color: var(--muted); }
+  .topo-svg { display: block; }
   .topo-foot {
     margin: 20px 0 0; padding-top: 16px;
     border-top: 1px dashed var(--border);
@@ -146,11 +106,6 @@
     font-family: 'JetBrains Mono', monospace;
   }
   .topo-foot b { color: var(--good); font-weight: 600; }
-  @media (max-width: 620px) {
-    .topo { grid-template-columns: 1fr; gap: 14px; }
-    .topo-links { display: none; }
-    .svc::before { display: none; }
-  }
 
   /* ---- Features ---- */
   .grid {
@@ -255,19 +210,53 @@
 
 <div class="topo-card">
   <p class="topo-title">Service topology &mdash; stateless services, shared PostgreSQL with per-service isolation</p>
-  <div class="topo">
-    <div class="gateway">
-      <div class="g-name">api-gateway</div>
-      <div class="g-meta">single entry point &middot; routing &middot; JWT validation</div>
-    </div>
-    <div class="topo-links" aria-hidden="true"></div>
-    <div class="services">
-      <div class="svc"><span class="s-name">auth-service</span><span class="s-meta">OAuth2 grant types, OTP verification, JWT issue + refresh</span></div>
-      <div class="svc"><span class="s-name">wallet-service</span><span class="s-meta">wallet accounts, balances, holds</span></div>
-      <div class="svc"><span class="s-name">transaction-service</span><span class="s-meta">transfers and transaction history</span></div>
-      <div class="svc"><span class="s-name">webhook-service</span><span class="s-meta">event notifications to consumers</span></div>
-    </div>
-  </div>
+  <svg class="topo-svg" viewBox="0 0 940 280" width="100%" height="auto" role="img"
+       aria-label="Topology: the api-gateway is the single entry point routing to four internal services — auth-service, wallet-service, transaction-service and webhook-service."
+       font-family="Inter, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+    <defs>
+      <marker id="wArrow" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
+        <path d="M0,0 L9,4 L0,8 Z" fill="#b388ff"/>
+      </marker>
+    </defs>
+
+    <!-- routing rails: gateway -> bus -> services -->
+    <g stroke="#b388ff" stroke-opacity="0.55" stroke-width="1.6" fill="none">
+      <line x1="220" y1="141" x2="370" y2="141"/>
+      <line x1="370" y1="45"  x2="370" y2="237"/>
+    </g>
+    <g stroke="#b388ff" stroke-opacity="0.55" stroke-width="1.6" marker-end="url(#wArrow)">
+      <line x1="370" y1="45"  x2="516" y2="45"/>
+      <line x1="370" y1="109" x2="516" y2="109"/>
+      <line x1="370" y1="173" x2="516" y2="173"/>
+      <line x1="370" y1="237" x2="516" y2="237"/>
+    </g>
+
+    <!-- gateway -->
+    <rect x="20" y="101" width="200" height="80" rx="12" fill="#b388ff" fill-opacity="0.10" stroke="#b388ff" stroke-opacity="0.45"/>
+    <text x="120" y="133" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="13" fill="#b388ff">api-gateway</text>
+    <text x="120" y="151" text-anchor="middle" font-size="10" fill="#9aa4b8">single entry point</text>
+    <text x="120" y="166" text-anchor="middle" font-size="10" fill="#9aa4b8">routing &#183; JWT validation</text>
+
+    <!-- services -->
+    <g>
+      <rect x="520" y="18"  width="400" height="54" rx="11" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.10"/>
+      <rect x="520" y="82"  width="400" height="54" rx="11" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.10"/>
+      <rect x="520" y="146" width="400" height="54" rx="11" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.10"/>
+      <rect x="520" y="210" width="400" height="54" rx="11" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.10"/>
+    </g>
+    <g font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="12.5" fill="#f1f5fb">
+      <text x="538" y="42">auth-service</text>
+      <text x="538" y="106">wallet-service</text>
+      <text x="538" y="170">transaction-service</text>
+      <text x="538" y="234">webhook-service</text>
+    </g>
+    <g font-size="10" fill="#9aa4b8">
+      <text x="538" y="60">OAuth2 grant types &#183; OTP verification &#183; JWT issue + refresh</text>
+      <text x="538" y="124">wallet accounts &#183; balances &#183; holds</text>
+      <text x="538" y="188">transfers and transaction history</text>
+      <text x="538" y="252">event notifications to consumers</text>
+    </g>
+  </svg>
   <p class="topo-foot">shared-dtos <b>&#10003;</b> one contract module &mdash; no drift between service boundaries</p>
 </div>
 
