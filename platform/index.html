@@ -249,7 +249,7 @@
 <div class="diagram-card">
   <p class="diagram-title">Platform architecture &mdash; Route 53 &rarr; ALB &rarr; EKS/Fargate, backed by RDS &amp; Kafka</p>
   <svg class="diagram-svg" viewBox="0 0 940 432" width="100%" height="auto" role="img"
-       aria-label="Route 53 routes through an ALB with ACM/HTTPS into an EKS cluster on Fargate running reactive-wallet, real-time-cdp and sme-directory, plus Strimzi Kafka and the kube-prometheus-stack; RDS PostgreSQL Multi-AZ, ECR image registries, and S3 with DynamoDB state sit alongside."
+       aria-label="Route 53 routes through an ALB with ACM/HTTPS into an EKS cluster on Fargate running wallet-microservices, real-time-cdp and sme-directory, plus Strimzi Kafka and the kube-prometheus-stack; RDS PostgreSQL Multi-AZ, ECR image registries, and S3 with DynamoDB state sit alongside."
        font-family="Inter, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
     <defs>
       <marker id="pArr" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
@@ -288,7 +288,7 @@
       <rect x="448" y="160" width="188" height="66" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
     </g>
     <g font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11.5" fill="#f1f5fb">
-      <text x="142" y="190" text-anchor="middle">reactive-wallet</text>
+      <text x="142" y="190" text-anchor="middle">wallet-microservices</text>
       <text x="342" y="190" text-anchor="middle">real-time-cdp</text>
       <text x="542" y="190" text-anchor="middle">sme-directory</text>
     </g>
@@ -394,7 +394,7 @@ terraform {
 
 <span class="k">module</span> <span class="s">"pipeline"</span> {
   source                  = <span class="s">"../../modules/pipeline"</span>
-  for_each                = var.services   <span class="c"># reactive-wallet, real-time-cdp, sme-directory</span>
+  for_each                = var.services   <span class="c"># wallet-microservices, real-time-cdp, sme-directory</span>
   repository              = each.value.repo
   branch                  = each.value.branch
   codestar_connection_arn = var.codestar_connection_arn
