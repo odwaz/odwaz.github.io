@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpazaAPi — Commerce and Delivery for Spaza Shops | Odwa Matiwane</title>
+<meta name="description" content="Commerce and delivery for South African spaza shops: seven Spring Boot services coordinating through Kafka, idempotent payment webhooks, delivery that survives timeouts and offline drivers, deployed to Amazon EKS in Cape Town.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316181b'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23d4b56a'%3EOM%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/writeup.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="topbar">
+  <a class="back" href="https://odwaz.github.io/">&larr; Odwa Matiwane</a>
+  <span class="crumb">projects / <b>spaza-api</b></span>
+</nav>
+
+<header>
+  <p class="eyebrow">order<span class="sep">&rarr;</span>payment<span class="sep">&rarr;</span>stock<span class="sep">&rarr;</span>delivery</p>
+  <h1>SpazaAPi</h1>
+  <p class="thesis">
+    Online ordering and delivery for South African spaza shops: a storefront, a merchant dashboard and a driver flow on
+    top of <strong>seven Spring Boot services</strong> that coordinate through Kafka. Payments arrive by webhook,
+    stock and deliveries follow from events, and the whole thing is <strong>deployed to Amazon EKS in Cape Town</strong>.
+  </p>
+  <div class="meta-row">
+    <span class="pill hot">Java 21</span>
+    <span class="pill hot">Spring Boot 3.4</span>
+    <span class="pill hot">Apache Kafka</span>
+    <span class="pill hot">PostgreSQL</span>
+    <span class="pill">Solo project: services, UI, infra and pipeline</span>
+  </div>
+</header>
+
+<div class="diagram-card">
+  <p class="diagram-title">Services, and how they hear about each other</p>
+  <svg class="diagram-svg" viewBox="0 0 940 250" role="img"
+       aria-label="The storefront and merchant dashboard call the api-gateway, which routes to six services: merchant, customer, payment, catalog, order and delivery. Catalog, order and delivery exchange order-events and delivery-events over Kafka. External payment providers send webhooks to payment-service. An external customer data platform receives activity and sends callbacks.">
+    <defs>
+      <marker id="sArrow" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
+        <path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/>
+      </marker>
+      <marker id="xArrow" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
+        <path d="M0,0 L9,4 L0,8 Z" fill="#9aa4b8"/>
+      </marker>
+    </defs>
+
+    <!-- clients -->
+    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2">
+      <rect x="20" y="40" width="150" height="56" rx="10"/>
+      <rect x="20" y="120" width="150" height="56" rx="10"/>
+    </g>
+    <g font-weight="600" font-size="13.5" fill="#f1f5fb" text-anchor="middle">
+      <text x="95" y="65">storefront</text>
+      <text x="95" y="145">merchant dashboard</text>
+    </g>
+    <g font-size="11" fill="#9aa4b8" text-anchor="middle">
+      <text x="95" y="82">customers and drivers</text>
+      <text x="95" y="162">orders, stock, payouts</text>
+    </g>
+    <g stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#sArrow)">
+      <line x1="170" y1="68" x2="196" y2="84"/>
+      <line x1="170" y1="148" x2="196" y2="122"/>
+    </g>
+
+    <!-- gateway -->
+    <rect x="200" y="62" width="130" height="80" rx="10" fill="#7aa2ff" fill-opacity="0.08" stroke="#7aa2ff" stroke-opacity="0.6"/>
+    <text x="265" y="98" text-anchor="middle" font-weight="600" font-size="14" fill="#7aa2ff">api-gateway</text>
+    <text x="265" y="117" text-anchor="middle" font-size="11" fill="#9aa4b8">Spring Cloud Gateway</text>
+    <line x1="330" y1="102" x2="356" y2="102" stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#sArrow)"/>
+
+    <!-- services -->
+    <rect x="360" y="10" width="440" height="156" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-dasharray="3 4"/>
+    <text x="376" y="30" font-size="11" fill="#9aa4b8">services, each with its own least-privilege database role</text>
+    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2">
+      <rect x="376" y="40" width="128" height="46" rx="8"/>
+      <rect x="516" y="40" width="128" height="46" rx="8"/>
+      <rect x="656" y="40" width="128" height="46" rx="8"/>
+      <rect x="376" y="104" width="128" height="46" rx="8"/>
+      <rect x="516" y="104" width="128" height="46" rx="8"/>
+      <rect x="656" y="104" width="128" height="46" rx="8"/>
+    </g>
+    <g font-weight="600" font-size="13" fill="#f1f5fb" text-anchor="middle">
+      <text x="440" y="68">merchant</text>
+      <text x="580" y="68">customer</text>
+      <text x="720" y="68">payment</text>
+      <text x="440" y="132">catalog</text>
+      <text x="580" y="132">order</text>
+      <text x="720" y="132">delivery</text>
+    </g>
+
+    <!-- Kafka -->
+    <g stroke="#fbbf24" stroke-width="1.4" stroke-dasharray="3 3">
+      <line x1="440" y1="150" x2="440" y2="190"/>
+      <line x1="580" y1="150" x2="580" y2="190"/>
+      <line x1="720" y1="150" x2="720" y2="190"/>
+    </g>
+    <rect x="376" y="190" width="408" height="40" rx="8" fill="#fbbf24" fill-opacity="0.08" stroke="#fbbf24" stroke-opacity="0.6"/>
+    <text x="580" y="215" text-anchor="middle" font-size="12.5" fill="#fbbf24" font-weight="600">Kafka: order-events, delivery-events</text>
+
+    <!-- external systems -->
+    <rect x="815" y="40" width="110" height="46" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
+    <text x="870" y="60" text-anchor="middle" font-weight="600" font-size="12" fill="#f1f5fb">Ozow, Stripe</text>
+    <text x="870" y="76" text-anchor="middle" font-size="10.5" fill="#9aa4b8">webhooks</text>
+    <line x1="815" y1="63" x2="788" y2="63" stroke="#9aa4b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#xArrow)"/>
+    <rect x="815" y="104" width="110" height="46" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
+    <text x="870" y="124" text-anchor="middle" font-weight="600" font-size="12" fill="#f1f5fb">external CDP</text>
+    <text x="870" y="140" text-anchor="middle" font-size="10.5" fill="#9aa4b8">HTTPS contract</text>
+  </svg>
+  <p class="diagram-foot">Dashed boxes belong to other organisations. Payment providers call in with webhooks; a customer data platform receives activity and calls back with segment changes.</p>
+</div>
+
+<h2>What it does</h2>
+<div class="grid">
+  <div class="feature">
+    <h3>catalogue and stock</h3>
+    <p>Merchants manage products and stock from the dashboard. Stock moves when order events arrive, not when a page is loaded.</p>
+  </div>
+  <div class="feature">
+    <h3>payments</h3>
+    <p>Card and instant-EFT payments through Stripe and Ozow, confirmed by webhook, plus vouchers and a wallet balance for repeat customers.</p>
+  </div>
+  <div class="feature">
+    <h3>delivery</h3>
+    <p>Drivers pick nearby jobs, share live location over WebSocket, and close each delivery with the customer's 4-digit PIN. Customers rate the driver afterwards.</p>
+  </div>
+  <div class="feature">
+    <h3>pricing and routes</h3>
+    <p>Delivery fees come from zones and distance, with peak-hour multipliers. Several orders can be grouped into one multi-stop route for a driver.</p>
+  </div>
+  <div class="feature">
+    <h3>merchant analytics</h3>
+    <p>Delivery success rates, delivery times and driver earnings over any date range.</p>
+  </div>
+  <div class="feature">
+    <h3>CDP integration</h3>
+    <p>Four services report customer activity to an external customer data platform. Its signed segment callbacks become signals the storefront and driver flow can act on.</p>
+  </div>
+</div>
+
+<h2>Engineering highlights</h2>
+<p class="section-sub">What makes it hold up when payments, drivers and networks misbehave.</p>
+
+<div class="hl">
+  <h3>Services hear about each other through events</h3>
+  <p>An order publishes to <code>order-events</code>; catalog adjusts stock and delivery creates the job, each in its own consumer group. Delivery publishes to <code>delivery-events</code>, and order follows along. No service calls another to finish its own work.</p>
+</div>
+<div class="hl">
+  <h3>Every consumer assumes it will see things twice</h3>
+  <p>Kafka and payment providers both deliver at least once. Delivery skips an order that already has a delivery, order never moves a status backwards, and the Ozow and Stripe handlers skip transactions they've already processed.</p>
+</div>
+<div class="hl">
+  <h3>Deliveries that recover on their own</h3>
+  <p>Scheduled sweeps handle the real world. An assignment a driver hasn't picked up in 30 minutes goes back to the pool, a driver silent for 5 minutes is marked offline, and status updates that failed to send are retried from a queue every 2 minutes for up to 24 hours.</p>
+</div>
+<div class="hl">
+  <h3>Proof at the door</h3>
+  <p>A delivery only completes with the PIN the customer received, so "delivered" means the customer had the parcel in hand, not that the driver tapped a button.</p>
+</div>
+<div class="hl">
+  <h3>Reactions to segment changes, verified</h3>
+  <p>customer-service verifies each CDP callback's Ed25519 signature, then maps the segment to a signal: a browsing nudge, a support flag for delivery trouble, or a wallet suggestion for cash payers. Signals clear when the customer leaves the segment.</p>
+</div>
+<div class="hl">
+  <h3>Run like production</h3>
+  <p>On AWS it runs on EKS in af-south-1 with RDS PostgreSQL, an NLB in front of NGINX ingress, and DNS in Route 53. PodDisruptionBudgets keep services up through node drains, and Prometheus, Grafana, Loki and Jaeger cover metrics, logs and traces. Terraform defines the AWS and Huawei Cloud environments.</p>
+</div>
+
+<h2>Tech stack</h2>
+<div class="stack-group">
+  <p class="stack-label">Services</p>
+  <div class="chips">
+    <span class="chip">Java 21</span><span class="chip">Spring Boot 3.4</span><span class="chip">Spring Cloud Gateway</span><span class="chip">Spring Kafka</span><span class="chip">WebSocket (STOMP)</span><span class="chip">PostgreSQL</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Web apps</p>
+  <div class="chips">
+    <span class="chip">React 18</span><span class="chip">Vite</span><span class="chip">TanStack Query</span><span class="chip">Tailwind CSS</span><span class="chip">pnpm workspaces</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Platform</p>
+  <div class="chips">
+    <span class="chip">Amazon EKS</span><span class="chip">RDS</span><span class="chip">Route 53</span><span class="chip">NGINX ingress</span><span class="chip">Terraform</span><span class="chip">Huawei Cloud CCE</span><span class="chip">Prometheus</span><span class="chip">Grafana</span><span class="chip">Loki</span><span class="chip">Jaeger</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Quality</p>
+  <div class="chips">
+    <span class="chip">JUnit 5</span><span class="chip">Mockito</span><span class="chip">139 test classes</span><span class="chip">SonarCloud</span>
+  </div>
+</div>
+
+<h2>How it ships</h2>
+<p class="section-sub">One GitLab pipeline builds and tests every service, gates on SonarCloud, then pushes images and deploys to whichever cluster the job targets: local kind, Huawei Cloud or Amazon EKS.</p>
+<div class="pipeline-scroll">
+  <div class="pipeline">
+    <div class="stage"><span class="s-name">build</span><span class="s-meta">Maven, JDK 21</span></div>
+    <div class="stage"><span class="s-name">test</span><span class="s-meta">JUnit 5</span></div>
+    <div class="stage quality"><span class="s-name">sonar</span><span class="s-meta">SonarCloud gate</span></div>
+    <div class="stage"><span class="s-name">push</span><span class="s-meta">ECR or Huawei SWR</span></div>
+    <div class="stage deploy"><span class="s-name">deploy</span><span class="s-meta">EKS, CCE or kind</span></div>
+  </div>
+</div>
+
+<footer>
+  <span>SpazaAPi, designed and built by <a href="https://odwaz.github.io/">Odwa Matiwane</a></span>
+  <span>Source available on request: <a href="mailto:odwadevwork@gmail.com">odwadevwork@gmail.com</a></span>
+</footer>
+
+</div>
+</body>
+</html>
