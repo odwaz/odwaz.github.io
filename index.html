@@ -164,45 +164,17 @@
   .intro { color: var(--muted); max-width: 64ch; margin: 0 0 32px; }
   h3 { font-family: var(--display); font-weight: 700; letter-spacing: -0.015em; margin: 0; }
 
-  /* Video */
-  .player {
-    background: var(--forest); border-radius: 14px; overflow: hidden;
-    border: 1px solid var(--line);
-    box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 24px 48px -24px rgba(20, 22, 25, 0.35);
-  }
-  .player video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--forest); }
-  .cuts { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 16px; }
-  .cut {
-    font: inherit; cursor: pointer; text-align: left;
-    background: var(--surface); color: var(--ink);
-    border: 1px solid var(--line); border-radius: 10px;
-    padding: 10px 16px; min-width: 220px; flex: 1 1 220px; max-width: 360px;
-  }
-  .cut b { display: block; font-weight: 600; }
-  .cut span { display: block; color: var(--muted); font-size: 0.86rem; }
-  .cut[aria-pressed="true"] { border-color: var(--viridian); box-shadow: inset 3px 0 0 var(--viridian); }
-  .cut:hover { border-color: var(--viridian); }
-  .note { color: var(--muted); font-size: 0.88rem; margin: 12px 0 0; }
 
   /* Projects */
   .feature {
-    display: grid; grid-template-columns: 1.05fr 1fr; gap: 0;
     background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
     overflow: hidden;
   }
-  .feature > div { padding: 32px; }
-  .feature .new { border-left: 1px solid var(--line); }
+  .feature > div { padding: 32px; max-width: 72ch; }
   .feature h3 { font-size: 1.9rem; margin-bottom: 4px; }
   .feature .what { color: var(--brass); font-weight: 600; margin: 0 0 16px; }
   .feature p { margin: 0 0 16px; }
-  .feature h4 { font-family: var(--display); font-weight: 700; font-size: 1.05rem; margin: 0 0 12px; }
-  .feature ul { margin: 0; padding: 0; list-style: none; }
-  .feature li { padding: 12px 0; border-top: 1px solid var(--line); font-size: 0.95rem; }
-  .feature li:first-child { border-top: 0; padding-top: 0; }
-  .feature li b { font-weight: 600; }
   @media (max-width: 860px) {
-    .feature { grid-template-columns: 1fr; }
-    .feature .new { border-left: 0; border-top: 1px solid var(--line); }
     .feature > div { padding: 24px 20px; }
   }
 
@@ -212,6 +184,7 @@
     border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; background: var(--paper);
   }
   .readmore { font-weight: 600; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; }
 
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
   @media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
@@ -282,7 +255,7 @@
       Two sides of one system: writing the services, and running the platform they live on.
     </p>
     <div class="actions">
-      <a class="btn primary" href="#demo">Watch the demo</a>
+      <a class="btn primary" href="#projects">See the projects</a>
       <a class="btn ghost" href="mailto:odwadevwork@gmail.com">Email me</a>
       <a class="btn ghost" href="https://github.com/odwaz">GitHub</a>
     </div>
@@ -303,25 +276,6 @@
 
 <main class="wrap">
 
-<section class="block" id="demo">
-  <h2>See it running</h2>
-  <p class="intro">Narrated recordings of Gimba with one client app connected over its public contract, a spaza-shop store, on a local Kubernetes cluster. Every screen, request and payload in them comes from a real run.</p>
-  <div class="cuts" role="group" aria-label="Choose a cut">
-    <button class="cut" type="button" aria-pressed="true" data-src="media/gimba-product.mp4" data-poster="media/gimba-product.jpg">
-      <b>Product cut</b><span>1 min 18 &middot; what the business sees</span>
-    </button>
-    <button class="cut" type="button" aria-pressed="false" data-src="media/gimba-technical.mp4" data-poster="media/gimba-technical.jpg">
-      <b>Technical cut</b><span>2 min 52 &middot; protocol, pipeline and stack</span>
-    </button>
-  </div>
-  <div class="player">
-    <video id="video" controls preload="none" playsinline poster="media/gimba-product.jpg">
-      <source src="media/gimba-product.mp4" type="video/mp4">
-      Your browser can't play this video. <a href="media/gimba-product.mp4">Download it instead.</a>
-    </video>
-  </div>
-</section>
-
 <section class="block" id="projects">
   <h2>Projects</h2>
   <p class="intro">Systems I designed and built end to end. Each write-up covers the architecture, the decisions and the API surface.</p>
@@ -332,18 +286,10 @@
       <p class="what">Real-time customer data platform</p>
       <p>Apps send events; Gimba stitches them into one profile per customer, keeps segments current, and calls the app back when someone enters or leaves a segment. Gimba decides <em>who</em>. The app decides <em>what happens</em>, and Gimba reports on the result.</p>
       <p>Multi-tenant and fully reactive, with no blocking calls in the hot path. Profiles can be replayed from the append-only event log, and projections update off Kafka.</p>
-      <a class="readmore" href="https://odwaz.github.io/real-time-cdp/">Read the Gimba write-up</a>
+      <p class="links"><a class="readmore" href="https://odwaz.github.io/real-time-cdp/">Read the Gimba write-up</a>
+        <a class="readmore" href="media/gimba-product.mp4">Watch the demo (1:18)</a></p>
       <ul class="stack">
         <li>Apache Kafka</li><li>Spring WebFlux</li><li>R2DBC</li><li>PostgreSQL JSONB</li><li>Event sourcing</li><li>CQRS</li><li>Resilience4j</li><li>Claude API</li><li>Property tests</li>
-      </ul>
-    </div>
-    <div class="new">
-      <h4>Added recently</h4>
-      <ul>
-        <li><b>Segments from plain English.</b> Describe an audience and an LLM drafts the rule. A deterministic validator and a SQL preview check it before anything is saved. The model writes config only and never touches customer data.</li>
-        <li><b>Automations on entry and exit.</b> Callbacks fire when a profile joins or leaves a segment, including when a time window lapses.</li>
-        <li><b>A signed, versioned contract.</b> Clients integrate against an OpenAPI spec. Callbacks are signed with Ed25519, so clients verify with a public key and can't forge them.</li>
-        <li><b>Analytics and reports.</b> An overview, CSV exports and segment member lists. Revenue counts settled payments, not orders placed.</li>
       </ul>
     </div>
   </article>
@@ -473,22 +419,6 @@
       });
     }, { threshold: 0.4 });
     loops.forEach(function (v) { io.observe(v); });
-  })();
-  (function () {
-    var video = document.getElementById('video');
-    var cuts = document.querySelectorAll('.cut');
-    cuts.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        if (btn.getAttribute('aria-pressed') === 'true') return;
-        cuts.forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
-        var wasPlaying = !video.paused;
-        video.pause();
-        video.poster = btn.dataset.poster;
-        video.querySelector('source').src = btn.dataset.src;
-        video.load();
-        if (wasPlaying) video.play();
-      });
-    });
   })();
 </script>
 </body>
