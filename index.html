@@ -171,6 +171,8 @@
     overflow: hidden;
   }
   .feature > div { padding: 32px; max-width: 72ch; }
+  .feature .demo { margin: 0; border-bottom: 1px solid var(--line); background: var(--paper); }
+  .feature .demo video { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; background: var(--paper); }
   .feature h3 { font-size: 1.9rem; margin-bottom: 4px; }
   .feature .what { color: var(--brass); font-weight: 600; margin: 0 0 16px; }
   .feature p { margin: 0 0 16px; }
@@ -281,13 +283,17 @@
   <p class="intro">Systems I designed and built end to end. Each write-up covers the architecture, the decisions and the API surface.</p>
 
   <article class="feature">
+    <figure class="demo">
+      <video controls playsinline preload="none" poster="media/gimba-product.jpg" aria-label="Gimba demo, 1 minute 18 seconds">
+        <source src="media/gimba-product.mp4" type="video/mp4">
+      </video>
+    </figure>
     <div>
       <h3>Gimba</h3>
       <p class="what">Real-time customer data platform</p>
       <p>Apps send events; Gimba stitches them into one profile per customer, keeps segments current, and calls the app back when someone enters or leaves a segment. Gimba decides <em>who</em>. The app decides <em>what happens</em>, and Gimba reports on the result.</p>
       <p>Multi-tenant and fully reactive, with no blocking calls in the hot path. Profiles can be replayed from the append-only event log, and projections update off Kafka.</p>
-      <p class="links"><a class="readmore" href="https://odwaz.github.io/real-time-cdp/">Read the Gimba write-up</a>
-        <a class="readmore" href="media/gimba-product.mp4">Watch the demo (1:18)</a></p>
+      <p class="links"><a class="readmore" href="https://odwaz.github.io/real-time-cdp/">Read the Gimba write-up</a></p>
       <ul class="stack">
         <li>Apache Kafka</li><li>Spring WebFlux</li><li>R2DBC</li><li>PostgreSQL JSONB</li><li>Event sourcing</li><li>CQRS</li><li>Resilience4j</li><li>Claude API</li><li>Property tests</li>
       </ul>
