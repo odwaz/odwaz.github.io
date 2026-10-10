@@ -194,14 +194,14 @@
 </div>
 
 <h2>How it ships</h2>
-<p class="section-sub">One GitLab pipeline builds and tests every service, gates on SonarCloud, then pushes images and deploys to whichever cluster the job targets: local kind, Huawei Cloud or Amazon EKS.</p>
+<p class="section-sub">One GitLab pipeline builds and tests every service, gates on SonarCloud, then pushes images and deploys to whichever cluster the job targets: Amazon EKS or Huawei Cloud.</p>
 <div class="pipeline-scroll">
   <div class="pipeline">
     <div class="stage"><span class="s-name">build</span><span class="s-meta">Maven, JDK 21</span></div>
     <div class="stage"><span class="s-name">test</span><span class="s-meta">JUnit 5</span></div>
     <div class="stage quality"><span class="s-name">sonar</span><span class="s-meta">SonarCloud gate</span></div>
     <div class="stage"><span class="s-name">push</span><span class="s-meta">ECR or Huawei SWR</span></div>
-    <div class="stage deploy"><span class="s-name">deploy</span><span class="s-meta">EKS, CCE or kind</span></div>
+    <div class="stage deploy"><span class="s-name">deploy</span><span class="s-meta">EKS or CCE</span></div>
   </div>
 </div>
 

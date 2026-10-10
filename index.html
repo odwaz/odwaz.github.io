@@ -301,7 +301,7 @@
                aria-label="Recording of zaripay, the wallet's web app: sign in with a one-time code, top up R500, send R120, and the balance and history update">
           <source src="media/wallet-run.mp4" type="video/mp4">
         </video>
-        <figcaption>A real run on the local cluster: sign in with a one-time code, top up R500, send R120.</figcaption>
+        <figcaption>A real run: sign in with a one-time code, top up R500, send R120.</figcaption>
       </figure>
       <h3>Wallet Microservices</h3>
       <p class="what">Distributed digital wallet</p>
@@ -353,14 +353,14 @@
   </div>
 
   <div class="pipeline-card">
-    <header><h3>SpazaAPi</h3><span>One GitLab pipeline, three possible clusters</span></header>
+    <header><h3>SpazaAPi</h3><span>GitLab CI/CD, Maven on JDK 21</span></header>
     <div class="stages-scroll">
       <ol class="stages">
         <li class="stage"><b>build</b><span>Maven, JDK 21</span></li>
         <li class="stage"><b>test</b><span>JUnit 5</span></li>
         <li class="stage gate"><b>sonar</b><span>SonarCloud gate</span></li>
         <li class="stage"><b>push</b><span>ECR or Huawei SWR</span></li>
-        <li class="stage ship"><b>deploy</b><span>EKS, CCE or kind</span></li>
+        <li class="stage ship"><b>deploy</b><span>EKS or CCE</span></li>
       </ol>
     </div>
   </div>
