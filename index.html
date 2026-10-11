@@ -206,13 +206,12 @@
   .project p { margin: 0 0 14px; color: var(--ink); font-size: 0.97rem; }
   .project .stack { margin-top: auto; padding-top: 4px; }
   .project .readmore { margin-bottom: 16px; }
-  .clip { margin: 22px -26px -26px; }
-  .clip { display: flex; flex-direction: column-reverse; }
+  .clip { margin: 20px 0 0; }
   .clip video {
     display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover;
-    border-radius: 0 0 14px 14px; border-top: 1px solid var(--line); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 10px; background: var(--paper);
   }
-  .clip figcaption { color: var(--muted); font-size: 0.82rem; padding: 0 26px 10px; }
+  .clip figcaption { color: var(--muted); font-size: 0.82rem; margin-top: 8px; }
 
   /* Skills: build side / run side */
   .sides { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 2px solid var(--ink); }
