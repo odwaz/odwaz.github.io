@@ -206,12 +206,13 @@
   .project p { margin: 0 0 14px; color: var(--ink); font-size: 0.97rem; }
   .project .stack { margin-top: auto; padding-top: 4px; }
   .project .readmore { margin-bottom: 16px; }
-  .clip { margin: -26px -26px 22px; }
+  .clip { margin: 22px -26px -26px; }
+  .clip { display: flex; flex-direction: column-reverse; }
   .clip video {
     display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover;
-    border-radius: 14px 14px 0 0; border-bottom: 1px solid var(--line); background: var(--paper);
+    border-radius: 0 0 14px 14px; border-top: 1px solid var(--line); background: var(--paper);
   }
-  .clip figcaption { color: var(--muted); font-size: 0.82rem; padding: 10px 26px 0; }
+  .clip figcaption { color: var(--muted); font-size: 0.82rem; padding: 0 26px 10px; }
 
   /* Skills: build side / run side */
   .sides { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 2px solid var(--ink); }
@@ -311,13 +312,6 @@
 
   <div class="pair">
     <article class="project">
-      <figure class="clip">
-        <video class="loop" muted loop playsinline preload="metadata" poster="media/wallet-run.jpg"
-               aria-label="Recording of zaripay, the wallet's web app: sign in with a one-time code, top up R500, send R120, and the balance and history update">
-          <source src="media/wallet-run.mp4" type="video/mp4">
-        </video>
-        <figcaption>A real run: sign in with a one-time code, top up R500, send R120.</figcaption>
-      </figure>
       <h3>Wallet Microservices</h3>
       <p class="what">Distributed digital wallet</p>
       <p>A rand wallet as an API gateway and four reactive Spring Boot services. Every money movement is a balanced journal in a double-entry ledger, events leave through a transactional outbox, and money calls are idempotent. Shipped with ArgoCD GitOps onto Terraform-provisioned AWS.</p>
@@ -325,15 +319,15 @@
       <ul class="stack">
         <li>Spring WebFlux</li><li>R2DBC</li><li>Double-entry ledger</li><li>Outbox</li><li>OAuth2 + OTP</li><li>ArgoCD</li><li>Terraform</li>
       </ul>
+      <figure class="clip">
+        <video class="loop" muted loop playsinline preload="metadata" poster="media/wallet-run.jpg"
+               aria-label="Recording of zaripay, the wallet's web app: sign in with a one-time code, top up R500, send R120, and the balance and history update">
+          <source src="media/wallet-run.mp4" type="video/mp4">
+        </video>
+        <figcaption>A real run: sign in with a one-time code, top up R500, send R120.</figcaption>
+      </figure>
     </article>
     <article class="project">
-      <figure class="clip">
-        <video class="loop" muted loop playsinline preload="metadata" poster="media/spaza-run.jpg"
-               aria-label="SpazaAPi's storefront and driver app from a real run: search, cart, checkout with the wallet, order placed, the driver accepts, picks up and hands over with the customer's PIN">
-          <source src="media/spaza-run.mp4" type="video/mp4">
-        </video>
-        <figcaption>A real run: order at the storefront, then the driver accepts, picks up and hands over with the PIN.</figcaption>
-      </figure>
       <h3>SpazaAPi</h3>
       <p class="what">Commerce and delivery for spaza shops</p>
       <p>Online ordering and delivery for South African spaza shops: an API gateway and six Spring Boot services coordinating through Kafka, idempotent payment-provider webhooks, and deliveries that recover from driver timeouts and offline drivers. Runs on Amazon EKS in Cape Town.</p>
@@ -341,6 +335,13 @@
       <ul class="stack">
         <li>Spring Boot</li><li>Spring Cloud Gateway</li><li>Apache Kafka</li><li>PostgreSQL</li><li>WebSocket</li><li>Amazon EKS</li><li>Terraform</li>
       </ul>
+      <figure class="clip">
+        <video class="loop" muted loop playsinline preload="metadata" poster="media/spaza-run.jpg"
+               aria-label="SpazaAPi's storefront and driver app from a real run: add to cart, cash checkout, order placed, the driver accepts, picks up and hands over with the customer's PIN">
+          <source src="media/spaza-run.mp4" type="video/mp4">
+        </video>
+        <figcaption>A real run: order at the storefront, then the driver accepts, picks up and hands over with the PIN.</figcaption>
+      </figure>
     </article>
   </div>
 </section>
