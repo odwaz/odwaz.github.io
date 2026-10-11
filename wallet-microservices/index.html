@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wallet Microservices | Odwa Matiwane</title>
-<meta name="description" content="A rand wallet as five Spring Boot services: OTP sign-in, a double-entry ledger, a transactional outbox, idempotent money calls, and verified callbacks from an external customer data platform. GitOps onto Terraform-provisioned AWS.">
+<meta name="description" content="A rand wallet as an API gateway and four reactive Spring Boot services: OTP sign-in, a double-entry ledger, a transactional outbox, idempotent money calls and Ed25519-verified callbacks, with the service map, sequence flows, failure handling, contracts and schema.">
 <meta property="og:image" content="https://odwaz.github.io/media/wallet-run.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316181b'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23d4b56a'%3EOM%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="/assets/writeup.css">
+<link rel="stylesheet" href="/assets/writeup.css?v=2">
 </head>
 <body>
 <div class="wrap">
@@ -21,15 +21,15 @@
   <p class="eyebrow">zaripay<span class="sep">&rarr;</span>gateway<span class="sep">&rarr;</span>ledger<span class="sep">&rarr;</span>outbox</p>
   <h1>Wallet Microservices</h1>
   <p class="thesis">
-    A rand wallet built as <strong>five Spring Boot services behind an API gateway</strong>, fully reactive with
-    WebFlux and R2DBC. Every money movement is a balanced journal in a double-entry ledger, and every event
-    about it leaves through an outbox written in the same transaction. It ships through
-    <strong>GitOps onto Terraform-provisioned AWS</strong>.
+    A rand wallet built as <strong>an API gateway and four reactive Spring Boot services</strong> on WebFlux and R2DBC.
+    Every money movement is a balanced journal in a double-entry ledger, is safe to retry with an idempotency key,
+    and leaves through a <strong>transactional outbox</strong> written in the same database transaction.
+    Ships through GitOps onto Terraform-provisioned AWS.
   </p>
   <div class="meta-row">
     <span class="pill hot">Java 17</span>
-    <span class="pill hot">Spring WebFlux</span>
-    <span class="pill hot">R2DBC</span>
+    <span class="pill hot">Spring Boot 3.4 · WebFlux</span>
+    <span class="pill hot">R2DBC · PostgreSQL</span>
     <span class="pill hot">ArgoCD GitOps</span>
     <span class="pill">Solo project: services, UI, infra and pipeline</span>
   </div>
@@ -43,134 +43,304 @@
   <figcaption>zaripay, the wallet's web app: sign in with a one-time code, top up R500, send R120 to another wallet, and the balance and history update. Recorded from a real run, sped up 1.4&times;.</figcaption>
 </figure>
 
+<!-- ============================== HIGH-LEVEL DESIGN ============================== -->
+
+<h2>High-level design</h2>
+<p class="section-sub">Money moves synchronously inside wallet-service's own transaction. Everything that reports on it happens afterwards, from an outbox, so a slow or failing downstream can never block or lose a payment.</p>
+
 <div class="diagram-card">
-  <p class="diagram-title">Services</p>
-  <svg class="diagram-svg" viewBox="0 0 940 290" role="img"
-       aria-label="zaripay calls the api-gateway, which routes to auth-service, wallet-service, transaction-service and webhook-service. transaction-service sends events to an external customer data platform, which sends signed callbacks back to wallet-service.">
+  <p class="diagram-title">Services, ports and what connects them</p>
+  <svg class="diagram-svg" viewBox="0 0 940 380" role="img"
+       aria-label="zaripay calls the api-gateway on port 8000, which routes to auth-service 8001, wallet-service 8002, transaction-service 8003 and webhook-service 8004. wallet-service writes its journal, wallets and an outbox row in one transaction; an outbox publisher drains events to transaction-service over HTTP. transaction-service sends events to an external customer data platform, which sends Ed25519-signed callbacks back to wallet-service through the gateway. An external payment rail sends deposit and withdrawal notifications to webhook-service, which applies them through wallet-service. Each service owns its tables in one PostgreSQL server.">
     <defs>
-      <marker id="wArrow" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
-        <path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/>
-      </marker>
-      <marker id="xArrow" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
-        <path d="M0,0 L9,4 L0,8 Z" fill="#9aa4b8"/>
-      </marker>
+      <marker id="wA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
+      <marker id="wX" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#9aa4b8"/></marker>
     </defs>
-
-    <!-- client and gateway -->
-    <rect x="20" y="110" width="140" height="70" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2"/>
-    <text x="90" y="140" text-anchor="middle" font-weight="600" font-size="14" fill="#f1f5fb">zaripay</text>
-    <text x="90" y="160" text-anchor="middle" font-size="11" fill="#9aa4b8">React web app</text>
-    <line x1="160" y1="145" x2="196" y2="145" stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#wArrow)"/>
-
-    <rect x="200" y="105" width="160" height="80" rx="10" fill="#7aa2ff" fill-opacity="0.08" stroke="#7aa2ff" stroke-opacity="0.6"/>
-    <text x="280" y="138" text-anchor="middle" font-weight="600" font-size="14" fill="#7aa2ff">api-gateway</text>
-    <text x="280" y="157" text-anchor="middle" font-size="11" fill="#9aa4b8">routing, JWT check</text>
-    <text x="280" y="172" text-anchor="middle" font-size="11" fill="#9aa4b8">public: sign-up, sign-in</text>
-
-    <!-- routing bus -->
-    <g stroke="#7aa2ff" stroke-opacity="0.7" stroke-width="1.6" fill="none">
-      <line x1="360" y1="145" x2="392" y2="145"/>
-      <line x1="392" y1="45" x2="392" y2="245"/>
-    </g>
-    <g stroke="#7aa2ff" stroke-opacity="0.7" stroke-width="1.6" marker-end="url(#wArrow)">
-      <line x1="392" y1="45" x2="416" y2="45"/>
-      <line x1="392" y1="112" x2="416" y2="112"/>
-      <line x1="392" y1="178" x2="416" y2="178"/>
-      <line x1="392" y1="245" x2="416" y2="245"/>
-    </g>
-
-    <!-- services -->
+    <!-- client -->
+    <rect x="16" y="120" width="120" height="96" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2"/>
+    <text x="76" y="146" text-anchor="middle" font-weight="600" font-size="13" fill="#f1f5fb">zaripay</text>
+    <g font-size="10.5" fill="#9aa4b8" text-anchor="middle"><text x="76" y="166">web app</text><text x="76" y="182">React 19 · Vite</text><text x="76" y="198">Tailwind 4</text></g>
+    <line x1="136" y1="168" x2="158" y2="168" stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#wA)"/>
+    <!-- gateway -->
+    <rect x="162" y="104" width="128" height="128" rx="10" fill="#7aa2ff" fill-opacity="0.08" stroke="#7aa2ff" stroke-opacity="0.6"/>
+    <text x="226" y="126" text-anchor="middle" font-weight="600" font-size="13" fill="#7aa2ff">api-gateway</text>
+    <text x="226" y="142" text-anchor="middle" font-size="10.5" fill="#9aa4b8">:8000</text>
+    <g font-size="10" fill="#9aa4b8" text-anchor="middle"><text x="226" y="164">verifies JWT</text><text x="226" y="178">X-User-* headers</text><text x="226" y="192">decoded-path match</text><text x="226" y="206">callbacks: no JWT,</text><text x="226" y="220">signature instead</text></g>
+    <line x1="290" y1="168" x2="312" y2="168" stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#wA)"/>
+    <!-- services frame -->
+    <rect x="316" y="10" width="440" height="250" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-dasharray="3 4"/>
     <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2">
-      <rect x="420" y="20" width="290" height="52" rx="10"/>
-      <rect x="420" y="86" width="290" height="52" rx="10"/>
-      <rect x="420" y="152" width="290" height="52" rx="10"/>
-      <rect x="420" y="219" width="290" height="52" rx="10"/>
+      <rect x="328" y="22" width="204" height="110" rx="8"/><rect x="540" y="22" width="204" height="110" rx="8"/>
+      <rect x="328" y="140" width="204" height="110" rx="8"/><rect x="540" y="140" width="204" height="110" rx="8"/>
     </g>
-    <g font-weight="600" font-size="13.5" fill="#f1f5fb">
-      <text x="436" y="42">auth-service</text>
-      <text x="436" y="108">wallet-service</text>
-      <text x="436" y="174">transaction-service</text>
-      <text x="436" y="241">webhook-service</text>
+    <g font-weight="600" font-size="12.5" fill="#f1f5fb">
+      <text x="340" y="42">wallet-service <tspan fill="#9aa4b8" font-weight="400" font-size="10.5">:8002</tspan></text>
+      <text x="552" y="42">transaction-service <tspan fill="#9aa4b8" font-weight="400" font-size="10.5">:8003</tspan></text>
+      <text x="340" y="160">auth-service <tspan fill="#9aa4b8" font-weight="400" font-size="10.5">:8001</tspan></text>
+      <text x="552" y="160">webhook-service <tspan fill="#9aa4b8" font-weight="400" font-size="10.5">:8004</tspan></text>
     </g>
-    <g font-size="11" fill="#9aa4b8">
-      <text x="436" y="60">OAuth2, one-time codes, JWT issue and refresh</text>
-      <text x="436" y="126">double-entry ledger, outbox, idempotency keys</text>
-      <text x="436" y="192">history, dedupes outbox events, sends CDP events</text>
-      <text x="436" y="259">event notifications to subscribers</text>
+    <g font-size="10" fill="#9aa4b8">
+      <text x="340" y="60">wallets, top-up, transfer, withdraw</text><text x="340" y="74">double-entry ledger</text><text x="340" y="88">idempotency keys</text><text x="340" y="102" fill="#fbbf24">outbox → transaction-service</text><text x="340" y="116">CDP callback receiver</text>
+      <text x="552" y="60">transaction history</text><text x="552" y="74">dedupes on transactionId</text><text x="552" y="88">fees</text><text x="552" y="102" fill="#fbbf24">events → CDP (cdp_state)</text><text x="552" y="116">redelivery sweep</text>
+      <text x="340" y="178">login, one-time codes</text><text x="340" y="192">OAuth2 otp grant → JWT</text><text x="340" y="206">5 min TTL, 5 attempts</text><text x="340" y="220">sign-up creates the wallet</text>
+      <text x="552" y="178">inbound payment-rail</text><text x="552" y="192">deposit / withdrawal /</text><text x="552" y="206">transfer notifications</text><text x="552" y="220">→ applied via wallet-service</text>
     </g>
-
-    <!-- external system, outside the wallet's boundary -->
-    <rect x="790" y="95" width="130" height="100" rx="10" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
-    <text x="855" y="137" text-anchor="middle" font-weight="600" font-size="13" fill="#f1f5fb">external CDP</text>
-    <text x="855" y="156" text-anchor="middle" font-size="11" fill="#9aa4b8">another org,</text>
-    <text x="855" y="171" text-anchor="middle" font-size="11" fill="#9aa4b8">HTTPS contract</text>
-    <line x1="710" y1="178" x2="786" y2="168" stroke="#9aa4b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#xArrow)"/>
-    <line x1="788" y1="118" x2="714" y2="112" stroke="#9aa4b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#xArrow)"/>
-    <text x="750" y="194" text-anchor="middle" font-size="10.5" fill="#9aa4b8">events</text>
-    <text x="752" y="102" text-anchor="middle" font-size="10.5" fill="#9aa4b8">callbacks</text>
+    <!-- outbox arrow wallet -> transaction -->
+    <line x1="532" y1="98" x2="538" y2="98" stroke="#fbbf24" stroke-width="1.6" stroke-dasharray="3 2"/>
+    <!-- Postgres -->
+    <rect x="316" y="282" width="440" height="74" rx="10" fill="#38bdf8" fill-opacity="0.07" stroke="#38bdf8" stroke-opacity="0.55"/>
+    <text x="330" y="302" font-size="12.5" fill="#38bdf8" font-weight="600">PostgreSQL · R2DBC</text>
+    <g font-size="10.5" fill="#9aa4b8"><text x="330" y="320">one server, tables owned per service</text><text x="330" y="336">wallet: wallets, journals, ledger_entries, idempotency_keys,</text><text x="330" y="350">outbox_events, cdp_profile_results · auth: wallet_users · tx: transactions</text></g>
+    <!-- external CDP -->
+    <rect x="786" y="22" width="140" height="110" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
+    <text x="856" y="44" text-anchor="middle" font-weight="600" font-size="11.5" fill="#f1f5fb">external CDP</text>
+    <g font-size="10" fill="#9aa4b8" text-anchor="middle"><text x="856" y="64">events in: POST /v1/events</text><text x="856" y="78">X-Event-Id, X-Api-Key</text><text x="856" y="98">callbacks out:</text><text x="856" y="112">Ed25519-signed</text></g>
+    <line x1="744" y1="77" x2="782" y2="77" stroke="#9aa4b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#wX)"/>
+    <!-- external rail -->
+    <rect x="786" y="140" width="140" height="110" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
+    <text x="856" y="164" text-anchor="middle" font-weight="600" font-size="11.5" fill="#f1f5fb">payment rail</text>
+    <g font-size="10" fill="#9aa4b8" text-anchor="middle"><text x="856" y="184">deposit and</text><text x="856" y="198">withdrawal</text><text x="856" y="212">notifications</text></g>
+    <line x1="786" y1="195" x2="748" y2="195" stroke="#9aa4b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#wX)"/>
   </svg>
-  <p class="diagram-foot">Services share a PostgreSQL server but each owns its tables, and a <b>shared-dtos</b> module keeps the contracts between them from drifting.</p>
+  <p class="diagram-foot">Dashed boxes belong to other organisations. Solid lines are synchronous HTTP; dotted lines are asynchronous delivery. There is no message broker: the outbox table is the queue, drained over HTTP with retries, and a shared-dtos module keeps the contracts between services from drifting.</p>
 </div>
 
-<h2>What it does</h2>
-<div class="grid">
-  <div class="feature">
-    <h3>sign-in with one-time codes</h3>
-    <p>auth-service checks the password, then issues a JWT only after a one-time code is verified. Signing up creates the login and the user's ZAR wallet in one call.</p>
-  </div>
-  <div class="feature">
-    <h3>top-ups, transfers, withdrawals</h3>
-    <p>Money moves between wallets by alias. Every operation posts a balanced journal and updates the cached balance in the same transaction.</p>
-  </div>
-  <div class="feature">
-    <h3>history and notifications</h3>
-    <p>transaction-service keeps the history and forwards events to the CDP; webhook-service notifies subscribers. Neither sits in the path of a payment.</p>
-  </div>
-  <div class="feature">
-    <h3>CDP integration</h3>
-    <p>Wallet activity is sent to an external customer data platform over its published HTTP contract. When the CDP puts a customer in a segment it calls back; wallet-service verifies the signature and stores the result for the app to use.</p>
-  </div>
+<h3 style="margin-top:36px">Services</h3>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>Service</th><th>Port</th><th>Owns</th><th>Talks to</th></tr></thead>
+  <tbody>
+    <tr><td>api-gateway</td><td>8000</td><td>routing, JWT verification, <code>X-User-Id</code> / <code>-Email</code> / <code>-Phone</code> / <code>-Role</code> set from the token (client copies dropped), path matching on the decoded path</td><td>every service</td></tr>
+    <tr><td>auth-service</td><td>8001</td><td>wallet users, password check, one-time codes, OAuth2 authorization server with an <code>otp</code> grant that issues the JWT</td><td>&mdash;</td></tr>
+    <tr><td>wallet-service</td><td>8002</td><td>wallets, top-up / transfer / withdrawal, the double-entry ledger, idempotency keys, the outbox, CDP callbacks</td><td>transaction-service (outbox drain)</td></tr>
+    <tr><td>transaction-service</td><td>8003</td><td>transaction history, fees, the CDP send state per transaction</td><td>external CDP (events)</td></tr>
+    <tr><td>webhook-service</td><td>8004</td><td>inbound deposit, withdrawal and transfer notifications from a payment rail, validated and applied</td><td>wallet-service</td></tr>
+  </tbody>
+</table>
 </div>
 
-<h2>Engineering highlights</h2>
-<p class="section-sub">Where a wallet is easy to get subtly wrong, and what this one does about it.</p>
+<h3 style="margin-top:36px">Asynchronous paths</h3>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>Path</th><th>From → to</th><th>Delivery</th><th>Duplicate handling</th></tr></thead>
+  <tbody>
+    <tr><td>Outbox drain</td><td>wallet-service → transaction-service<br><code>POST /api/v1/transactions</code></td><td>polled every 2 s; claimed row by row; exponential backoff to 15 min; 10 attempts (~35 min) then FAILED</td><td>transaction-service returns the existing row for a known <code>transactionId</code> (unique index)</td></tr>
+    <tr><td>CDP events</td><td>transaction-service → CDP<br><code>POST /v1/events</code></td><td>sent after the row is saved; retried on 5xx, 408 and 429 (honouring <code>Retry-After</code>); a sweep re-sends anything still pending every 60 s</td><td>stable <code>X-Event-Id</code> = transactionId, so the CDP stores a retry once</td></tr>
+    <tr><td>CDP callbacks</td><td>CDP → wallet-service<br><code>POST /api/v1/cdp/callbacks</code></td><td>CDP retries until a 2xx</td><td><code>X-Delivery-Id</code> claimed through the idempotency table: a redelivery is a no-op</td></tr>
+  </tbody>
+</table>
+</div>
 
-<div class="hl">
-  <h3>A double-entry ledger, not a balance column</h3>
-  <p>Every money movement is a journal of postings that must sum to zero, or the whole journal is rejected, so a half-applied transfer can't reach the ledger. The wallet balance is a cache of the ledger, and <code>GET /wallets/{id}/reconcile</code> checks one against the other.</p>
+<!-- ============================== LOW-LEVEL DESIGN ============================== -->
+
+<h2>Low-level design</h2>
+
+<h3>1. Transfer</h3>
+<p class="section-sub">One reactive transaction moves the money and records the event; delivery happens afterwards.</p>
+<div class="flow-card">
+  <div class="flow-scroll">
+  <svg class="flow-svg" viewBox="0 0 940 540" role="img"
+       aria-label="Transfer sequence. zaripay posts the transfer with an Idempotency-Key through the gateway, which adds the verified user id. wallet-service claims the idempotency key, checks the source wallet belongs to the caller and has the funds, then in one R2DBC transaction posts a balanced journal of a debit and a credit, saves both wallets under optimistic locking and writes a TRANSFER_COMPLETED outbox row. The idempotency record is completed with the response and the client gets 200. Later the outbox publisher claims the row and posts it to transaction-service, which saves it once per transactionId and sends it to the CDP with a stable event id, marking the row SENT or REJECTED.">
+    <defs>
+      <marker id="tA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
+      <marker id="tK" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#fbbf24"/></marker>
+      <marker id="tG" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#4ade80"/></marker>
+    </defs>
+    <!-- lanes: zaripay 70, gateway 230, wallet 400, postgres 570, transaction 730, cdp 875 -->
+    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.25">
+      <rect x="22" y="10" width="96" height="34" rx="7"/><rect x="182" y="10" width="96" height="34" rx="7"/>
+      <rect x="352" y="10" width="96" height="34" rx="7"/><rect x="522" y="10" width="96" height="34" rx="7"/>
+      <rect x="672" y="10" width="116" height="34" rx="7"/><rect x="830" y="10" width="90" height="34" rx="7" stroke-dasharray="4 3"/>
+    </g>
+    <g font-weight="600" font-size="11.5" fill="#f1f5fb" text-anchor="middle">
+      <text x="70" y="32">zaripay</text><text x="230" y="32">gateway</text><text x="400" y="32">wallet</text>
+      <text x="570" y="32">PostgreSQL</text><text x="730" y="32">transaction</text><text x="875" y="32">CDP</text>
+    </g>
+    <g stroke="#ffffff" stroke-opacity="0.18" stroke-dasharray="3 4">
+      <line x1="70" y1="44" x2="70" y2="530"/><line x1="230" y1="44" x2="230" y2="530"/><line x1="400" y1="44" x2="400" y2="530"/>
+      <line x1="570" y1="44" x2="570" y2="530"/><line x1="730" y1="44" x2="730" y2="530"/><line x1="875" y1="44" x2="875" y2="530"/>
+    </g>
+    <g font-size="10.5" fill="#f1f5fb">
+      <line x1="70" y1="78" x2="226" y2="78" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#tA)"/>
+      <text x="76" y="71">1. POST /api/v1/wallets/transfer</text><text x="76" y="93" fill="#9aa4b8">Bearer JWT · Idempotency-Key</text>
+      <line x1="230" y1="118" x2="396" y2="118" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#tA)"/>
+      <text x="236" y="111">2. + X-User-Id (verified)</text>
+      <line x1="400" y1="156" x2="566" y2="156" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#tA)"/>
+      <text x="406" y="149">3. claim key · IN_PROGRESS</text><text x="406" y="171" fill="#9aa4b8">same key, other body → 409</text>
+      <line x1="400" y1="200" x2="566" y2="200" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#tA)"/>
+      <text x="406" y="193">4. load wallets</text><text x="406" y="215" fill="#9aa4b8">source is the caller's · balance ≥ amount</text>
+      <rect x="380" y="232" width="380" height="92" rx="6" fill="#7aa2ff" fill-opacity="0.1" stroke="#7aa2ff" stroke-opacity="0.5"/>
+      <text x="392" y="252">5. one R2DBC transaction</text>
+      <text x="392" y="270" fill="#9aa4b8">journal TRANSFER: debit source, credit target (sum = 0)</text>
+      <text x="392" y="286" fill="#9aa4b8">save both wallets (@Version optimistic lock)</text>
+      <text x="392" y="302" fill="#9aa4b8">insert outbox row TRANSFER_COMPLETED · PENDING</text>
+      <text x="392" y="318" fill="#9aa4b8">any failure rolls all of it back</text>
+      <line x1="400" y1="350" x2="566" y2="350" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#tA)"/>
+      <text x="406" y="343">6. key COMPLETED + response</text>
+      <line x1="400" y1="380" x2="74" y2="380" stroke="#4ade80" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#tG)"/>
+      <text x="80" y="373">7. 200 · transactionId, balance after</text>
+      <text x="406" y="412" fill="#fbbf24">later, every 2 s</text>
+      <line x1="400" y1="430" x2="726" y2="430" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#tK)"/>
+      <text x="406" y="423" dx="80">8. claim row → POST /api/v1/transactions</text>
+      <text x="406" y="446" fill="#9aa4b8">10 s timeout · backoff to 15 min · FAILED after 10 tries</text>
+      <rect x="452" y="458" width="318" height="24" rx="5" fill="#7aa2ff" fill-opacity="0.1" stroke="#7aa2ff" stroke-opacity="0.5"/>
+      <text x="462" y="474">9. save once per transactionId · cdp_state PENDING</text>
+      <line x1="730" y1="506" x2="871" y2="506" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#tK)"/>
+      <text x="736" y="499">10. POST /v1/events</text><text x="736" y="521" fill="#9aa4b8">X-Event-Id → SENT / REJECTED</text>
+    </g>
+  </svg>
+  </div>
+  <p class="diagram-foot">Top-ups and withdrawals take the same shape with a system account on the other side of the journal (<code>SETTLEMENT_EXTERNAL</code>), so the ledger always balances. <code>GET /wallets/{id}/reconcile</code> compares the cached balance with the balance derived from the ledger.</p>
 </div>
-<div class="hl">
-  <h3>Events leave through a transactional outbox</h3>
-  <p>The event describing a payment is written in the same database transaction as the payment, then drained to transaction-service by a publisher. Delivery is at-least-once, so the consumer dedupes on the transaction ID and nothing is lost if a call fails mid-flight.</p>
+
+<h3 style="margin-top:36px">2. Sign-in and CDP callbacks</h3>
+<div class="flow-card">
+  <div class="flow-scroll">
+  <svg class="flow-svg" viewBox="0 0 940 360" role="img"
+       aria-label="Sign-in: zaripay posts email and password to /oauth/login; auth-service checks the password and issues a one-time code valid for five minutes with five attempts; zaripay exchanges it at /oauth2/token with grant type otp for a JWT. CDP callback: the CDP posts to /api/v1/cdp/callbacks through the gateway without a user token; wallet-service verifies the Ed25519 signature over the raw body with the CDP's public key, claims the X-Delivery-Id so a redelivery is ignored, matches the profile to a wallet by email or phone, stores the result and replies.">
+    <defs>
+      <marker id="sA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
+      <marker id="sG" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#4ade80"/></marker>
+    </defs>
+    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.25">
+      <rect x="22" y="10" width="96" height="34" rx="7"/><rect x="232" y="10" width="96" height="34" rx="7"/>
+      <rect x="442" y="10" width="96" height="34" rx="7" stroke-dasharray="4 3"/><rect x="652" y="10" width="96" height="34" rx="7"/>
+      <rect x="822" y="10" width="96" height="34" rx="7"/>
+    </g>
+    <g font-weight="600" font-size="11.5" fill="#f1f5fb" text-anchor="middle">
+      <text x="70" y="32">zaripay</text><text x="280" y="32">auth</text><text x="490" y="32">CDP</text><text x="700" y="32">gateway</text><text x="870" y="32">wallet</text>
+    </g>
+    <g stroke="#ffffff" stroke-opacity="0.18" stroke-dasharray="3 4">
+      <line x1="70" y1="44" x2="70" y2="350"/><line x1="280" y1="44" x2="280" y2="350"/><line x1="490" y1="44" x2="490" y2="350"/>
+      <line x1="700" y1="44" x2="700" y2="350"/><line x1="870" y1="44" x2="870" y2="350"/>
+    </g>
+    <g font-size="10.5" fill="#f1f5fb">
+      <text x="76" y="64" fill="#9aa4b8">sign-in (via the gateway)</text>
+      <line x1="70" y1="88" x2="276" y2="88" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#sA)"/>
+      <text x="76" y="81">1. POST /oauth/login</text><text x="76" y="103" fill="#9aa4b8">password checked → one-time code</text>
+      <text x="286" y="118" fill="#9aa4b8">code valid 5 min, 5 attempts</text>
+      <line x1="70" y1="140" x2="276" y2="140" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#sA)"/>
+      <text x="76" y="133">2. POST /oauth2/token · grant otp</text>
+      <line x1="280" y1="168" x2="74" y2="168" stroke="#4ade80" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#sG)"/>
+      <text x="86" y="186" fill="#9aa4b8">3. JWT (user id, email, role)</text>
+
+      <text x="496" y="220" fill="#9aa4b8">segment change (any time)</text>
+      <line x1="490" y1="240" x2="696" y2="240" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#sA)"/>
+      <text x="496" y="233">4. POST /api/v1/cdp/callbacks</text><text x="496" y="255" fill="#9aa4b8">X-Signature, -Key-Id, -Delivery-Id</text>
+      <line x1="700" y1="276" x2="866" y2="276" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#sA)"/>
+      <text x="706" y="269">5. passed without a user JWT</text>
+      <rect x="760" y="292" width="170" height="54" rx="6" fill="#4ade80" fill-opacity="0.1" stroke="#4ade80" stroke-opacity="0.5"/>
+      <text x="766" y="308">6. Ed25519 over raw body</text>
+      <text x="766" y="323" fill="#9aa4b8">claim delivery id (dedupe)</text>
+      <text x="766" y="338" fill="#9aa4b8">store result → 200</text>
+    </g>
+  </svg>
+  </div>
+  <p class="diagram-foot">A callback with no delivery id, a bad signature or a malformed body is rejected before anything is stored. The CDP's public key is shared out of band, so only the CDP can produce a valid signature.</p>
 </div>
-<div class="hl">
-  <h3>Idempotent money calls</h3>
-  <p>Top-ups and transfers accept an <code>Idempotency-Key</code>. A retried request returns the original result instead of moving money twice, and a request that arrives while the first is still running is told so rather than raced.</p>
+
+<h3 style="margin-top:36px">3. Failure and compensation</h3>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>When</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td>Client retries a transfer</td><td>Same <code>Idempotency-Key</code> and body returns the stored response; nothing moves twice. Same key with a different body is a 409. A retry while the first is still running is told it's in progress rather than raced.</td></tr>
+    <tr><td>Insufficient funds or someone else's wallet</td><td>Rejected before the transaction opens; nothing is written.</td></tr>
+    <tr><td>Journal doesn't balance, a save fails, or a concurrent update wins</td><td>The whole R2DBC transaction rolls back: journal, both balances and the outbox row together. A stale <code>@Version</code> means no lost update.</td></tr>
+    <tr><td>transaction-service down</td><td>The outbox row waits with exponential backoff up to 15 minutes; after 10 attempts (about 35 minutes) it is parked FAILED, counted in a periodic report, and replayable through <code>/internal/outbox/{id}/replay</code>.</td></tr>
+    <tr><td>Publisher dies mid-send</td><td>A claim older than 2 minutes is reclaimed and the row re-sent; transaction-service's unique <code>transactionId</code> turns the repeat into a no-op.</td></tr>
+    <tr><td>CDP down or rate-limiting</td><td>The transaction stays <code>cdp_state = PENDING</code>; 5xx, 408 and 429 are retried (429 after its <code>Retry-After</code>) and a sweep re-sends pending rows every 60 s.</td></tr>
+    <tr><td>CDP rejects the event (other 4xx)</td><td>Marked REJECTED and logged as a contract violation: retrying a bad request can't fix it.</td></tr>
+    <tr><td>Forged or replayed callback</td><td>Forged: signature fails, 401. Replayed: the delivery id is already claimed, so nothing changes.</td></tr>
+    <tr><td>Cached balance drifts from the ledger</td><td><code>GET /wallets/{id}/reconcile</code> reports both; balances are only ever written alongside a journal.</td></tr>
+  </tbody>
+</table>
 </div>
-<div class="hl">
-  <h3>Success has to be proven</h3>
-  <p>A database driver mismatch once made every write die with a JVM-level error that left the reactive chain empty, and WebFlux turned that into a 200. The fix moved to the driver Spring Boot manages, and the controller now treats an empty result as a failure, with tests that pin both cases.</p>
+
+<h3 style="margin-top:36px">4. Contracts</h3>
+<div class="code-pair">
+  <div>
+    <p class="code-label"><b>outbox_events.payload</b> · TRANSFER_COMPLETED</p>
+<pre class="code">{
+  "transactionId": "3c0a…",
+  "journalRef": "JRN-…",
+  "senderWalletId": 8,
+  "recipientWalletId": 9,
+  "merchantId": null,
+  "amount": 120.00,
+  "currency": "ZAR",
+  "transactionType": "TRANSFER",
+  "description": "Transfer",
+  "status": "COMPLETED",
+  "balanceBefore": 500.00,
+  "balanceAfter": 380.00,
+  "userEmail": "…",
+  "userPhone": "…"
+}</pre>
+  </div>
+  <div>
+    <p class="code-label"><b>to the CDP</b> · POST /v1/events · X-Event-Id</p>
+<pre class="code">{
+  "eventId": "3c0a…",
+  "event": "wallet.transaction.transfer",
+  "customer": { "email": "…", "phone": "…" },
+  "properties": {
+    "walletId": 8, "amount": 120.00,
+    "balanceBefore": 500.00, "balanceAfter": 380.00,
+    "transactionType": "TRANSFER",
+    "recipientWalletId": 9, "currency": "ZAR",
+    "status": "COMPLETED", "timestamp": "…"
+  },
+  "context": { "source": "wallet-api" }
+}</pre>
+    <p class="code-label" style="margin-top:16px"><b>from the CDP</b> · POST /api/v1/cdp/callbacks</p>
+<pre class="code">X-Delivery-Id: d-81f…   X-Event-Id: 3c0a…
+X-Signature: (Ed25519)  X-Signature-Key-Id: k1
+{ "eventId": "3c0a…", "profileKey": "…",
+  "customer": { "email": "…", "phone": "…" },
+  "automation": { … }, "enrichment": { … },
+  "producedAt": "…" }</pre>
+  </div>
 </div>
-<div class="hl">
-  <h3>Callbacks it can trust</h3>
-  <p>The CDP signs each callback with Ed25519 over the raw body. wallet-service verifies it with the CDP's public key, which is shared out of band, so the gateway can let callbacks through without a user token and nobody else can forge one.</p>
+<p class="section-sub" style="margin-top:12px">The CDP event carries the customer by email and phone only; the wallet's own ids ride in the properties. The event id is the transaction id, so every retry of the same money movement is the same event.</p>
+
+<h3 style="margin-top:36px">5. Tables per service</h3>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>Service</th><th>Tables</th><th>Key columns</th></tr></thead>
+  <tbody>
+    <tr><td>wallet</td><td><code>wallets</code>, <code>journals</code>, <code>ledger_entries</code>, <code>idempotency_keys</code>, <code>outbox_events</code>, <code>cdp_profile_results</code></td><td>wallets: wallet_id, user_id, balance, currency, wallet_alias (unique), version<br>ledger_entries: journal_id, account_type, account_ref, direction, amount (&gt; 0)<br>idempotency_keys: idempotency_key (unique), endpoint, request_hash, response_body, state<br>outbox_events: aggregate_id, event_type, payload, state, attempts, last_error, published_at</td></tr>
+    <tr><td>transaction</td><td><code>transactions</code></td><td>transaction_id (unique), sender_wallet_id, recipient_wallet_id, amount, transaction_type, status, cdp_state</td></tr>
+    <tr><td>auth</td><td><code>wallet_users</code></td><td>id, email (unique), password (hash), phone_number, role, active</td></tr>
+  </tbody>
+</table>
 </div>
-<div class="hl">
-  <h3>GitOps delivery with ArgoCD</h3>
-  <p>GitLab CI builds and tests, Trivy scans the images, and ArgoCD syncs the desired state from Git to the cluster. Conditional workflows skip services that didn't change.</p>
-</div>
+
+<h2>Security at the edge</h2>
+<ul class="points">
+  <li>The gateway verifies the JWT, removes any <code>X-User-*</code> header the client sent and sets its own from the verified claims. Routes are matched on the decoded path, so an encoded or dotted path can't slip past a rule.</li>
+  <li>Sign-in needs the password and then a one-time code (5 minutes, 5 attempts) before a token is issued.</li>
+  <li>Money endpoints only act on the caller's own wallet: a transfer's source must belong to the caller, and idempotency keys are scoped to the caller so one user's key can't replay another's response.</li>
+  <li>CDP callbacks carry no user token; they're accepted only with a valid Ed25519 signature over the raw body.</li>
+</ul>
+
+<h2>Known limits</h2>
+<ul class="points">
+  <li>One-time codes are held in auth-service's memory, so more than one replica would need a shared store.</li>
+  <li>webhook-service validates the fields of inbound rail notifications but doesn't verify a signature from the rail.</li>
+</ul>
 
 <h2>Tech stack</h2>
 <div class="stack-group">
   <p class="stack-label">Services</p>
   <div class="chips">
-    <span class="chip">Java 17</span><span class="chip">Spring Boot 3.4</span><span class="chip">Spring WebFlux</span><span class="chip">Spring Cloud Gateway</span><span class="chip">R2DBC</span><span class="chip">PostgreSQL</span>
+    <span class="chip">Java 17</span><span class="chip">Spring Boot 3.4</span><span class="chip">Spring WebFlux</span><span class="chip">Spring Cloud Gateway</span><span class="chip">R2DBC</span><span class="chip">PostgreSQL</span><span class="chip">Resilience4j</span>
   </div>
 </div>
 <div class="stack-group">
   <p class="stack-label">Security</p>
   <div class="chips">
-    <span class="chip">OAuth2</span><span class="chip">One-time codes</span><span class="chip">JWT</span><span class="chip">Ed25519 verification</span><span class="chip">Trivy</span>
+    <span class="chip">Spring Authorization Server</span><span class="chip">One-time codes</span><span class="chip">JWT</span><span class="chip">Ed25519 verification</span><span class="chip">Trivy</span>
   </div>
 </div>
 <div class="stack-group">
