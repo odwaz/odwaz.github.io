@@ -414,14 +414,6 @@
   <li>Payment-provider webhooks are rejected unless their signature verifies and the amount matches what was charged.</li>
 </ul>
 
-<h2>Known limits</h2>
-<ul class="points">
-  <li>Stock is decremented when <code>ORDER_PLACED</code> is consumed, not reserved at checkout, and the stock consumer does not yet de-duplicate by event id, so a redelivered event can decrement twice.</li>
-  <li>A provider-confirmed card or EFT payment updates payment-service's transaction; order-service is not yet told, so those orders' <code>paymentStatus</code> is not moved to PAID.</li>
-  <li>CDP events are retried but not stored in an outbox, so an event whose retries run out is lost to the CDP.</li>
-  <li>Rate limits and OTP codes live in one pod's memory; more replicas would need a shared store.</li>
-</ul>
-
 <h2>Tech stack</h2>
 <div class="stack-group">
   <p class="stack-label">Services</p>

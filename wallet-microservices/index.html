@@ -35,12 +35,12 @@
   </div>
 </header>
 
-<figure class="run wide">
-  <video controls muted playsinline preload="none" poster="/media/wallet-run.jpg">
-    <source src="/media/wallet-run.mp4" type="video/mp4">
-    <a href="/media/wallet-run.mp4">Download the recording.</a>
+<figure class="run">
+  <video controls playsinline preload="none" poster="/media/wallet-architecture.jpg" aria-label="Wallet Microservices architecture walkthrough, 2 minutes 32 seconds">
+    <source src="/media/wallet-architecture.mp4" type="video/mp4">
+    <a href="/media/wallet-architecture.mp4">Download the recording.</a>
   </video>
-  <figcaption>zaripay, the wallet's web app: sign in with a one-time code, top up R500, send R120 to another wallet, and the balance and history update. Recorded from a real run, sped up 1.4&times;.</figcaption>
+  <figcaption>Architecture walkthrough, 2:32: high-level design, payment and failure flows, the transfer and sign-in/callback sequence diagrams, contracts and tables. App screens are from a real run.</figcaption>
 </figure>
 
 <!-- ============================== HIGH-LEVEL DESIGN ============================== -->
@@ -322,12 +322,6 @@ X-Signature: (Ed25519)  X-Signature-Key-Id: k1
   <li>Sign-in needs the password and then a one-time code (5 minutes, 5 attempts) before a token is issued.</li>
   <li>Money endpoints only act on the caller's own wallet: a transfer's source must belong to the caller, and idempotency keys are scoped to the caller so one user's key can't replay another's response.</li>
   <li>CDP callbacks carry no user token; they're accepted only with a valid Ed25519 signature over the raw body.</li>
-</ul>
-
-<h2>Known limits</h2>
-<ul class="points">
-  <li>One-time codes are held in auth-service's memory, so more than one replica would need a shared store.</li>
-  <li>webhook-service validates the fields of inbound rail notifications but doesn't verify a signature from the rail.</li>
 </ul>
 
 <h2>Tech stack</h2>

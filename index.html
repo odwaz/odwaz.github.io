@@ -6,8 +6,8 @@
 <title>Odwa Matiwane — Backend &amp; DevOps Engineer</title>
 <meta name="description" content="Backend &amp; DevOps engineer. Event-driven Java/Spring microservices, and the Terraform-provisioned AWS platform and CI/CD that ships them.">
 <meta property="og:title" content="Odwa Matiwane — Backend &amp; DevOps Engineer">
-<meta property="og:description" content="Event-driven Java/Spring microservices, and the platform that ships them. Includes a narrated demo of Gimba, a real-time customer data platform.">
-<meta property="og:image" content="https://odwaz.github.io/media/gimba-product.jpg">
+<meta property="og:description" content="Event-driven Java/Spring microservices, and the platform that ships them.">
+<meta property="og:image" content="https://odwaz.github.io/media/gimba-run.jpg">
 <meta name="theme-color" content="#16181b">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316181b'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23d4b56a'%3EOM%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -301,10 +301,11 @@
       </ul>
     </div>
     <figure class="demo">
-      <video controls playsinline preload="none" poster="media/gimba-technical.jpg" aria-label="Gimba technical walk-through, 2 minutes 52 seconds">
-        <source src="media/gimba-technical.mp4" type="video/mp4">
+      <video class="loop" muted loop playsinline preload="metadata" poster="media/gimba-run.jpg"
+             aria-label="Gimba's admin console from a real run: registered apps, the live event stream, a unified profile and its traits, segments, the AI segment builder, automations, webhook outcomes and analytics">
+        <source src="media/gimba-run.mp4" type="video/mp4">
       </video>
-      <figcaption>Technical walk-through, 2:52</figcaption>
+      <figcaption>A real run of the admin console: apps, live events, a unified profile, segments, webhook outcomes, analytics.</figcaption>
     </figure>
   </article>
 
@@ -319,19 +320,26 @@
       </figure>
       <h3>Wallet Microservices</h3>
       <p class="what">Distributed digital wallet</p>
-      <p>A rand wallet as five Spring Boot services behind an API gateway. Every money movement is a balanced journal in a double-entry ledger, events leave through a transactional outbox, and money calls are idempotent. Shipped with ArgoCD GitOps onto Terraform-provisioned AWS.</p>
+      <p>A rand wallet as an API gateway and four reactive Spring Boot services. Every money movement is a balanced journal in a double-entry ledger, events leave through a transactional outbox, and money calls are idempotent. Shipped with ArgoCD GitOps onto Terraform-provisioned AWS.</p>
       <a class="readmore" href="https://odwaz.github.io/wallet-microservices/">Read the wallet write-up</a>
       <ul class="stack">
         <li>Spring WebFlux</li><li>R2DBC</li><li>Double-entry ledger</li><li>Outbox</li><li>OAuth2 + OTP</li><li>ArgoCD</li><li>Terraform</li>
       </ul>
     </article>
     <article class="project">
+      <figure class="clip">
+        <video class="loop" muted loop playsinline preload="metadata" poster="media/spaza-run.jpg"
+               aria-label="SpazaAPi's storefront and driver app from a real run: search, cart, checkout with the wallet, order placed, the driver accepts, picks up and hands over with the customer's PIN">
+          <source src="media/spaza-run.mp4" type="video/mp4">
+        </video>
+        <figcaption>A real run: order at the storefront, then the driver accepts, picks up and hands over with the PIN.</figcaption>
+      </figure>
       <h3>SpazaAPi</h3>
       <p class="what">Commerce and delivery for spaza shops</p>
-      <p>Online ordering and delivery for South African spaza shops: seven Spring Boot services coordinating through Kafka, idempotent payment-provider webhooks, and deliveries that recover from driver timeouts and offline drivers. Runs on Amazon EKS in Cape Town.</p>
+      <p>Online ordering and delivery for South African spaza shops: an API gateway and six Spring Boot services coordinating through Kafka, idempotent payment-provider webhooks, and deliveries that recover from driver timeouts and offline drivers. Runs on Amazon EKS in Cape Town.</p>
       <a class="readmore" href="https://odwaz.github.io/spaza-api/">Read the SpazaAPi write-up</a>
       <ul class="stack">
-        <li>Java 21</li><li>Spring Boot 3.4</li><li>Apache Kafka</li><li>PostgreSQL</li><li>WebSocket</li><li>Amazon EKS</li><li>Terraform</li>
+        <li>Spring Boot</li><li>Spring Cloud Gateway</li><li>Apache Kafka</li><li>PostgreSQL</li><li>WebSocket</li><li>Amazon EKS</li><li>Terraform</li>
       </ul>
     </article>
   </div>
