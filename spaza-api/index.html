@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SpazaAPi — Commerce and Delivery for Spaza Shops | Odwa Matiwane</title>
-<meta name="description" content="Commerce and delivery for South African spaza shops: seven Spring Boot services coordinating through Kafka, idempotent payment webhooks, delivery that survives timeouts and offline drivers, deployed to Amazon EKS in Cape Town.">
+<meta name="description" content="Commerce and delivery for South African spaza shops: a gateway and six Spring Boot services coordinating through Kafka, with the service map, topics, sequence flows, failure handling, event contracts and schema.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316181b'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23d4b56a'%3EOM%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="/assets/writeup.css">
+<link rel="stylesheet" href="/assets/writeup.css?v=2">
 </head>
 <body>
 <div class="wrap">
@@ -20,158 +20,411 @@
   <p class="eyebrow">order<span class="sep">&rarr;</span>payment<span class="sep">&rarr;</span>stock<span class="sep">&rarr;</span>delivery</p>
   <h1>SpazaAPi</h1>
   <p class="thesis">
-    Online ordering and delivery for South African spaza shops: a storefront, a merchant dashboard and a driver flow on
-    top of <strong>seven Spring Boot services</strong> that coordinate through Kafka. Payments arrive by webhook,
-    stock and deliveries follow from events, and the whole thing is <strong>deployed to Amazon EKS in Cape Town</strong>.
+    Online ordering and delivery for South African spaza shops: a storefront, a merchant dashboard and a driver app on
+    top of <strong>an API gateway and six Spring Boot services</strong>. Checkout is synchronous where money moves and
+    event-driven everywhere else: stock and deliveries follow <strong>order events on Kafka</strong>, and orders follow
+    delivery events back. Deployed to Amazon EKS in Cape Town.
   </p>
   <div class="meta-row">
-    <span class="pill hot">Java 21</span>
-    <span class="pill hot">Spring Boot 3.4</span>
+    <span class="pill hot">Spring Boot 2.7 · Java 17 services</span>
+    <span class="pill hot">Spring Cloud Gateway · Boot 3.4 · Java 21</span>
     <span class="pill hot">Apache Kafka</span>
     <span class="pill hot">PostgreSQL</span>
     <span class="pill">Solo project: services, UI, infra and pipeline</span>
   </div>
 </header>
 
+<!-- ============================== HIGH-LEVEL DESIGN ============================== -->
+
+<h2>High-level design</h2>
+<p class="section-sub">Every request enters through the gateway. Services own their tables and talk over Kafka for anything that can happen after the response; the few calls that must happen inside a request are plain HTTP between services.</p>
+
 <div class="diagram-card">
-  <p class="diagram-title">Services, and how they hear about each other</p>
-  <svg class="diagram-svg" viewBox="0 0 940 250" role="img"
-       aria-label="The storefront and merchant dashboard call the api-gateway, which routes to six services: merchant, customer, payment, catalog, order and delivery. Catalog, order and delivery exchange order-events and delivery-events over Kafka. External payment providers send webhooks to payment-service. An external customer data platform receives activity and sends callbacks.">
+  <p class="diagram-title">Services, ports and what connects them</p>
+  <svg class="diagram-svg" viewBox="0 0 940 400" role="img"
+       aria-label="Storefront, driver app and merchant dashboard call the api-gateway on port 8080. The gateway routes to catalog 8081, merchant 8082, payment 8084, customer 8085, delivery 8086 and order 8087. order-service publishes order.events, consumed by catalog and delivery; delivery publishes delivery.events, consumed by order. All services use one PostgreSQL database with tables owned per service. A payment provider sends signed webhooks to payment-service. An external customer data platform receives events over HTTPS and sends signed callbacks to customer-service.">
     <defs>
-      <marker id="sArrow" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
-        <path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/>
-      </marker>
-      <marker id="xArrow" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
-        <path d="M0,0 L9,4 L0,8 Z" fill="#9aa4b8"/>
-      </marker>
+      <marker id="hA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
+      <marker id="hK" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#fbbf24"/></marker>
+      <marker id="hX" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#9aa4b8"/></marker>
     </defs>
 
     <!-- clients -->
-    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2">
-      <rect x="20" y="40" width="150" height="56" rx="10"/>
-      <rect x="20" y="120" width="150" height="56" rx="10"/>
-    </g>
-    <g font-weight="600" font-size="13.5" fill="#f1f5fb" text-anchor="middle">
-      <text x="95" y="65">storefront</text>
-      <text x="95" y="145">merchant dashboard</text>
-    </g>
+    <rect x="16" y="110" width="128" height="120" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2"/>
+    <text x="80" y="134" text-anchor="middle" font-weight="600" font-size="13" fill="#f1f5fb">clients</text>
     <g font-size="11" fill="#9aa4b8" text-anchor="middle">
-      <text x="95" y="82">customers and drivers</text>
-      <text x="95" y="162">orders, stock, payouts</text>
+      <text x="80" y="158">storefront</text>
+      <text x="80" y="176">driver app</text>
+      <text x="80" y="194">merchant dashboard</text>
+      <text x="80" y="216">React 18 · Vite</text>
     </g>
-    <g stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#sArrow)">
-      <line x1="170" y1="68" x2="196" y2="84"/>
-      <line x1="170" y1="148" x2="196" y2="122"/>
-    </g>
+    <line x1="144" y1="170" x2="164" y2="170" stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#hA)"/>
+    <text x="154" y="160" text-anchor="middle" font-size="9.5" fill="#9aa4b8">HTTPS</text>
 
     <!-- gateway -->
-    <rect x="200" y="62" width="130" height="80" rx="10" fill="#7aa2ff" fill-opacity="0.08" stroke="#7aa2ff" stroke-opacity="0.6"/>
-    <text x="265" y="98" text-anchor="middle" font-weight="600" font-size="14" fill="#7aa2ff">api-gateway</text>
-    <text x="265" y="117" text-anchor="middle" font-size="11" fill="#9aa4b8">Spring Cloud Gateway</text>
-    <line x1="330" y1="102" x2="356" y2="102" stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#sArrow)"/>
-
-    <!-- services -->
-    <rect x="360" y="10" width="440" height="156" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-dasharray="3 4"/>
-    <text x="376" y="30" font-size="11" fill="#9aa4b8">services, each with its own least-privilege database role</text>
-    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2">
-      <rect x="376" y="40" width="128" height="46" rx="8"/>
-      <rect x="516" y="40" width="128" height="46" rx="8"/>
-      <rect x="656" y="40" width="128" height="46" rx="8"/>
-      <rect x="376" y="104" width="128" height="46" rx="8"/>
-      <rect x="516" y="104" width="128" height="46" rx="8"/>
-      <rect x="656" y="104" width="128" height="46" rx="8"/>
+    <rect x="168" y="118" width="124" height="104" rx="10" fill="#7aa2ff" fill-opacity="0.08" stroke="#7aa2ff" stroke-opacity="0.6"/>
+    <text x="230" y="140" text-anchor="middle" font-weight="600" font-size="13" fill="#7aa2ff">api-gateway</text>
+    <text x="230" y="156" text-anchor="middle" font-size="10.5" fill="#9aa4b8">:8080</text>
+    <g font-size="10" fill="#9aa4b8" text-anchor="middle">
+      <text x="230" y="176">verifies JWT</text>
+      <text x="230" y="190">sets identity headers</text>
+      <text x="230" y="204">staff / driver gates</text>
+      <text x="230" y="216">rate limits</text>
     </g>
-    <g font-weight="600" font-size="13" fill="#f1f5fb" text-anchor="middle">
-      <text x="440" y="68">merchant</text>
-      <text x="580" y="68">customer</text>
-      <text x="720" y="68">payment</text>
-      <text x="440" y="132">catalog</text>
-      <text x="580" y="132">order</text>
-      <text x="720" y="132">delivery</text>
+    <line x1="292" y1="170" x2="312" y2="170" stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#hA)"/>
+
+    <!-- services frame -->
+    <rect x="316" y="8" width="484" height="200" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-dasharray="3 4"/>
+    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2">
+      <rect x="328" y="20" width="148" height="86" rx="8"/>
+      <rect x="484" y="20" width="148" height="86" rx="8"/>
+      <rect x="640" y="20" width="148" height="86" rx="8"/>
+      <rect x="328" y="114" width="148" height="86" rx="8"/>
+      <rect x="484" y="114" width="148" height="86" rx="8"/>
+      <rect x="640" y="114" width="148" height="86" rx="8"/>
+    </g>
+    <g font-weight="600" font-size="12.5" fill="#f1f5fb">
+      <text x="340" y="40">order <tspan fill="#9aa4b8" font-weight="400" font-size="10.5">:8087</tspan></text>
+      <text x="496" y="40">payment <tspan fill="#9aa4b8" font-weight="400" font-size="10.5">:8084</tspan></text>
+      <text x="652" y="40">customer <tspan fill="#9aa4b8" font-weight="400" font-size="10.5">:8085</tspan></text>
+      <text x="340" y="134">catalog <tspan fill="#9aa4b8" font-weight="400" font-size="10.5">:8081</tspan></text>
+      <text x="496" y="134">delivery <tspan fill="#9aa4b8" font-weight="400" font-size="10.5">:8086</tspan></text>
+      <text x="652" y="134">merchant <tspan fill="#9aa4b8" font-weight="400" font-size="10.5">:8082</tspan></text>
+    </g>
+    <g font-size="10" fill="#9aa4b8">
+      <text x="340" y="58">checkout, order status</text>
+      <text x="340" y="72">tracking, history</text>
+      <text x="340" y="90" fill="#fbbf24">pub order.events</text>
+      <text x="496" y="58">wallet, vouchers</text>
+      <text x="496" y="72">provider webhooks</text>
+      <text x="496" y="90">payment transactions</text>
+      <text x="652" y="58">accounts, OTP, carts</text>
+      <text x="652" y="72">addresses</text>
+      <text x="652" y="90">CDP callbacks, signals</text>
+      <text x="340" y="152">products, stock</text>
+      <text x="340" y="166">categories, search</text>
+      <text x="340" y="184" fill="#fbbf24">sub order.events</text>
+      <text x="496" y="152">jobs, drivers, PIN</text>
+      <text x="496" y="166">zones, pricing, routes</text>
+      <text x="496" y="184" fill="#fbbf24">sub order · pub delivery</text>
+      <text x="652" y="152">staff accounts, roles</text>
+      <text x="652" y="166">stores</text>
+      <text x="652" y="184">staff JWT + merchantId</text>
     </g>
 
     <!-- Kafka -->
     <g stroke="#fbbf24" stroke-width="1.4" stroke-dasharray="3 3">
-      <line x1="440" y1="150" x2="440" y2="190"/>
-      <line x1="580" y1="150" x2="580" y2="190"/>
-      <line x1="720" y1="150" x2="720" y2="190"/>
+      <line x1="402" y1="208" x2="402" y2="236"/>
+      <line x1="558" y1="208" x2="558" y2="236"/>
     </g>
-    <rect x="376" y="190" width="408" height="40" rx="8" fill="#fbbf24" fill-opacity="0.08" stroke="#fbbf24" stroke-opacity="0.6"/>
-    <text x="580" y="215" text-anchor="middle" font-size="12.5" fill="#fbbf24" font-weight="600">Kafka: order-events, delivery-events</text>
+    <rect x="316" y="236" width="484" height="62" rx="10" fill="#fbbf24" fill-opacity="0.08" stroke="#fbbf24" stroke-opacity="0.6"/>
+    <text x="330" y="256" font-size="12.5" fill="#fbbf24" font-weight="600">Apache Kafka</text>
+    <g font-size="10.5" fill="#9aa4b8">
+      <text x="330" y="274"><tspan fill="#f1f5fb" font-family="monospace">order.events</tspan>  order → catalog, delivery   (key = orderId)</text>
+      <text x="330" y="290"><tspan fill="#f1f5fb" font-family="monospace">delivery.events</tspan>  delivery → order   (key = orderId)</text>
+    </g>
 
-    <!-- external systems -->
-    <rect x="815" y="40" width="110" height="46" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
-    <text x="870" y="60" text-anchor="middle" font-weight="600" font-size="12" fill="#f1f5fb">Payment provider</text>
-    <text x="870" y="76" text-anchor="middle" font-size="10.5" fill="#9aa4b8">webhooks</text>
-    <line x1="815" y1="63" x2="788" y2="63" stroke="#9aa4b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#xArrow)"/>
-    <rect x="815" y="104" width="110" height="46" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
-    <text x="870" y="124" text-anchor="middle" font-weight="600" font-size="12" fill="#f1f5fb">external CDP</text>
-    <text x="870" y="140" text-anchor="middle" font-size="10.5" fill="#9aa4b8">HTTPS contract</text>
+    <!-- Postgres -->
+    <rect x="316" y="312" width="484" height="62" rx="10" fill="#38bdf8" fill-opacity="0.07" stroke="#38bdf8" stroke-opacity="0.55"/>
+    <text x="330" y="332" font-size="12.5" fill="#38bdf8" font-weight="600">PostgreSQL</text>
+    <g font-size="10.5" fill="#9aa4b8">
+      <text x="330" y="350">one database, tables owned per service (see schema below)</text>
+      <text x="330" y="366">no service writes another service's tables</text>
+    </g>
+
+    <!-- external: payment provider -->
+    <rect x="820" y="20" width="108" height="72" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
+    <text x="874" y="42" text-anchor="middle" font-weight="600" font-size="11.5" fill="#f1f5fb">payment</text>
+    <text x="874" y="56" text-anchor="middle" font-weight="600" font-size="11.5" fill="#f1f5fb">provider</text>
+    <text x="874" y="76" text-anchor="middle" font-size="10" fill="#9aa4b8">signed webhooks</text>
+    <line x1="820" y1="62" x2="792" y2="62" stroke="#9aa4b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#hX)"/>
+
+    <!-- external: CDP -->
+    <rect x="820" y="114" width="108" height="86" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
+    <text x="874" y="136" text-anchor="middle" font-weight="600" font-size="11.5" fill="#f1f5fb">external CDP</text>
+    <g font-size="10" fill="#9aa4b8" text-anchor="middle">
+      <text x="874" y="156">events out: HTTPS</text>
+      <text x="874" y="170">callbacks in:</text>
+      <text x="874" y="184">Ed25519-signed</text>
+    </g>
   </svg>
-  <p class="diagram-foot">Dashed boxes belong to other organisations. Payment providers call in with webhooks; a customer data platform receives activity and calls back with segment changes.</p>
+  <p class="diagram-foot">Dashed boxes belong to other organisations. Solid lines are synchronous HTTP; dotted lines are Kafka. Four services (catalog, order, payment, delivery) report customer activity to the CDP; its signed segment callbacks land on customer-service.</p>
 </div>
 
-<h2>What it does</h2>
-<div class="grid">
-  <div class="feature">
-    <h3>catalogue and stock</h3>
-    <p>Merchants manage products and stock from the dashboard. Stock moves when order events arrive, not when a page is loaded.</p>
-  </div>
-  <div class="feature">
-    <h3>payments</h3>
-    <p>Card and instant-EFT payments through a payment provider, confirmed by signed webhook, plus vouchers and a wallet balance for repeat customers.</p>
-  </div>
-  <div class="feature">
-    <h3>delivery</h3>
-    <p>Drivers pick nearby jobs, share live location over WebSocket, and close each delivery with the customer's 4-digit PIN. Customers rate the driver afterwards.</p>
-  </div>
-  <div class="feature">
-    <h3>pricing and routes</h3>
-    <p>Delivery fees come from zones and distance, with peak-hour multipliers. Several orders can be grouped into one multi-stop route for a driver.</p>
-  </div>
-  <div class="feature">
-    <h3>merchant analytics</h3>
-    <p>Delivery success rates, delivery times and driver earnings over any date range.</p>
-  </div>
-  <div class="feature">
-    <h3>CDP integration</h3>
-    <p>Four services report customer activity to an external customer data platform. Its signed segment callbacks become signals the storefront and driver flow can act on.</p>
-  </div>
+<h3 style="margin-top:36px">Services</h3>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>Service</th><th>Port</th><th>Owns</th><th>Talks to</th></tr></thead>
+  <tbody>
+    <tr><td>api-gateway</td><td>8080</td><td>routing, JWT verification, identity headers (<code>X-Auth-Customer-Id</code>, <code>-Driver-Id</code>, <code>-Merchant-Id</code>), staff-only <code>/private/**</code>, per-route rate limits</td><td>every service</td></tr>
+    <tr><td>order</td><td>8087</td><td>checkout, order status and history, tracking, shipping quotes</td><td>customer (cart), payment (wallet), Kafka (pub <code>order.events</code>, sub <code>delivery.events</code>), CDP</td></tr>
+    <tr><td>payment</td><td>8084</td><td>wallet balances, vouchers, payment transactions, payment-provider webhooks, merchant payment config</td><td>order (customer lookup), CDP</td></tr>
+    <tr><td>catalog</td><td>8081</td><td>products and stock, categories, content, search</td><td>Kafka (sub <code>order.events</code>), CDP</td></tr>
+    <tr><td>delivery</td><td>8086</td><td>delivery jobs, drivers, hand-over PIN, zones and peak pricing, multi-stop routes, ratings</td><td>Kafka (sub <code>order.events</code>, pub <code>delivery.events</code>), order (status), customer (signals), CDP</td></tr>
+    <tr><td>customer</td><td>8085</td><td>customer accounts, OTP login, password reset, addresses, carts, CDP callbacks and the signals they produce</td><td>CDP (callbacks in)</td></tr>
+    <tr><td>merchant</td><td>8082</td><td>staff accounts and roles, stores, staff tokens carrying the staff member's <code>merchantId</code></td><td>&mdash;</td></tr>
+  </tbody>
+</table>
 </div>
 
-<h2>Engineering highlights</h2>
-<p class="section-sub">What makes it hold up when payments, drivers and networks misbehave.</p>
+<h3 style="margin-top:36px">Kafka topics</h3>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>Topic</th><th>Producer</th><th>Consumers (group)</th><th>Event types</th></tr></thead>
+  <tbody>
+    <tr><td><code>order.events</code></td><td>order</td><td>catalog (<code>catalog-service</code>): adjust stock<br>delivery (<code>delivery-service</code>): create or cancel the job</td><td><code>ORDER_PLACED</code>, <code>ORDER_CANCELLED</code></td></tr>
+    <tr><td><code>delivery.events</code></td><td>delivery</td><td>order (<code>order-service</code>): move the order's status</td><td><code>DELIVERY_CREATED</code>, <code>_ASSIGNED</code>, <code>_PICKED_UP</code>, <code>_IN_TRANSIT</code>, <code>_COMPLETED</code>, <code>_FAILED</code>, <code>_CANCELLED</code></td></tr>
+  </tbody>
+</table>
+</div>
+<p class="section-sub" style="margin-top:12px">Both topics are keyed by order id, so every event about one order lands on one partition and is consumed in the order it was produced.</p>
 
-<div class="hl">
-  <h3>Services hear about each other through events</h3>
-  <p>An order publishes to <code>order-events</code>; catalog adjusts stock and delivery creates the job, each in its own consumer group. Delivery publishes to <code>delivery-events</code>, and order follows along. No service calls another to finish its own work.</p>
+<!-- ============================== LOW-LEVEL DESIGN ============================== -->
+
+<h2>Low-level design</h2>
+
+<h3>1. Checkout</h3>
+<p class="section-sub">Money is settled inside the request; stock and delivery follow from the event.</p>
+<div class="flow-card">
+  <div class="flow-scroll">
+  <svg class="flow-svg" viewBox="0 0 940 520" role="img"
+       aria-label="Checkout sequence. The client posts to the gateway, which forwards to order-service with the verified customer id. Order fetches the cart from customer-service and checks the wallet balance with payment-service for wallet orders, then saves the order and its items as pending and publishes ORDER_PLACED to Kafka before replying. After the database transaction commits, order debits the wallet and records the payment status as paid or failed. Catalog consumes ORDER_PLACED and decrements stock; delivery consumes it and creates the delivery job unless one already exists for the order.">
+    <defs>
+      <marker id="cA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
+      <marker id="cK" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#fbbf24"/></marker>
+      <marker id="cG" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#4ade80"/></marker>
+    </defs>
+    <!-- lanes: client 60, gateway 175, order 290, customer 405, payment 520, kafka 640, catalog 760, delivery 875 -->
+    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.25">
+      <rect x="18" y="10" width="84" height="34" rx="7"/><rect x="133" y="10" width="84" height="34" rx="7"/>
+      <rect x="248" y="10" width="84" height="34" rx="7"/><rect x="363" y="10" width="84" height="34" rx="7"/>
+      <rect x="478" y="10" width="84" height="34" rx="7"/><rect x="598" y="10" width="84" height="34" rx="7"/>
+      <rect x="718" y="10" width="84" height="34" rx="7"/><rect x="833" y="10" width="84" height="34" rx="7"/>
+    </g>
+    <g font-weight="600" font-size="11.5" fill="#f1f5fb" text-anchor="middle">
+      <text x="60" y="32">client</text><text x="175" y="32">gateway</text><text x="290" y="32">order</text>
+      <text x="405" y="32">customer</text><text x="520" y="32">payment</text><text x="640" y="32" fill="#fbbf24">Kafka</text>
+      <text x="760" y="32">catalog</text><text x="875" y="32">delivery</text>
+    </g>
+    <g stroke="#ffffff" stroke-opacity="0.18" stroke-dasharray="3 4">
+      <line x1="60" y1="44" x2="60" y2="510"/><line x1="175" y1="44" x2="175" y2="510"/><line x1="290" y1="44" x2="290" y2="510"/>
+      <line x1="405" y1="44" x2="405" y2="510"/><line x1="520" y1="44" x2="520" y2="510"/><line x1="640" y1="44" x2="640" y2="510"/>
+      <line x1="760" y1="44" x2="760" y2="510"/><line x1="875" y1="44" x2="875" y2="510"/>
+    </g>
+    <g font-size="10.5" fill="#f1f5fb">
+      <!-- 1 -->
+      <line x1="60" y1="78" x2="171" y2="78" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#cA)"/>
+      <text x="66" y="71">1. POST /api/v1/auth/cart/{code}/checkout</text>
+      <!-- 2 -->
+      <line x1="175" y1="112" x2="286" y2="112" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#cA)"/>
+      <text x="181" y="105">2. + X-Auth-Customer-Id</text>
+      <!-- 3 -->
+      <line x1="290" y1="146" x2="401" y2="146" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#cA)"/>
+      <text x="296" y="139">3. GET cart: owner, items, total</text>
+      <!-- 4 -->
+      <line x1="290" y1="180" x2="516" y2="180" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#cA)"/>
+      <text x="296" y="173">4. wallet orders: balance &#8805; cart total?</text>
+      <!-- 5 self -->
+      <rect x="266" y="196" width="48" height="40" rx="5" fill="#7aa2ff" fill-opacity="0.12" stroke="#7aa2ff" stroke-opacity="0.5"/>
+      <text x="322" y="212">5. save order + items, PENDING</text>
+      <text x="322" y="227" fill="#9aa4b8">one DB transaction (orders, order_items)</text>
+      <!-- 6 kafka -->
+      <line x1="290" y1="262" x2="636" y2="262" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#cK)"/>
+      <text x="296" y="255">6. publish ORDER_PLACED (key = orderId)</text>
+      <!-- 7 reply -->
+      <line x1="290" y1="296" x2="64" y2="296" stroke="#4ade80" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#cG)"/>
+      <text x="70" y="289">7. 200: order confirmation</text>
+      <!-- 8 after commit -->
+      <line x1="290" y1="336" x2="516" y2="336" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#cA)"/>
+      <text x="296" y="329">8. after commit: debit wallet</text>
+      <text x="296" y="352" fill="#9aa4b8">paymentStatus PAID, or FAILED if the debit fails</text>
+      <!-- 9 catalog -->
+      <line x1="640" y1="392" x2="756" y2="392" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#cK)"/>
+      <text x="646" y="385">9. ORDER_PLACED</text>
+      <text x="646" y="408" fill="#9aa4b8">catalog: decrement stock,</text>
+      <text x="646" y="422" fill="#9aa4b8">mark sold-out products unavailable</text>
+      <!-- 10 delivery -->
+      <line x1="640" y1="456" x2="871" y2="456" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#cK)"/>
+      <text x="646" y="449">10. ORDER_PLACED</text>
+      <text x="646" y="472" fill="#9aa4b8">delivery: create the job, priced by zone, distance</text>
+      <text x="646" y="486" fill="#9aa4b8">and peak multiplier; skipped if one already exists</text>
+    </g>
+  </svg>
+  </div>
+  <p class="diagram-foot">The wallet is debited <b>after</b> the order commits. The wallet lives in another service and cannot roll back with order's transaction: debiting first could charge a customer for an order that then fails to save, and payment-service exposes no credit endpoint to compensate with. Order also sends <code>order_placed</code> to the CDP at step 6; that call never blocks checkout.</p>
 </div>
-<div class="hl">
-  <h3>Every consumer assumes it will see things twice</h3>
-  <p>Kafka and payment providers both deliver at least once. Delivery skips an order that already has a delivery, order never moves a status backwards, and the payment webhook handlers skip transactions they've already processed.</p>
+
+<h3 style="margin-top:36px">2. Delivery lifecycle</h3>
+<p class="section-sub">The driver moves the job; the order follows by two independent paths.</p>
+<div class="flow-card">
+  <div class="flow-scroll">
+  <svg class="flow-svg" viewBox="0 0 940 460" role="img"
+       aria-label="Delivery lifecycle sequence. The driver app sends a status update through the gateway, which only allows a driver token acting on its own delivery. delivery-service saves the new status, requiring the customer's PIN to mark it delivered, then publishes the matching DELIVERY event to Kafka and also calls order-service's internal status endpoint with the service token, retrying three times with backoff and then parking the update in a failed_events table retried every two minutes for up to 24 hours. order-service maps the delivery status to an order status and ignores any update that would move the status backwards. On delivery, cash orders are marked paid and order_completed is sent to the CDP.">
+    <defs>
+      <marker id="dA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
+      <marker id="dK" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#fbbf24"/></marker>
+    </defs>
+    <!-- lanes: driver 80, gateway 260, delivery 450, kafka 650, order 850 -->
+    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.25">
+      <rect x="30" y="10" width="100" height="34" rx="7"/><rect x="210" y="10" width="100" height="34" rx="7"/>
+      <rect x="400" y="10" width="100" height="34" rx="7"/><rect x="600" y="10" width="100" height="34" rx="7"/>
+      <rect x="800" y="10" width="100" height="34" rx="7"/>
+    </g>
+    <g font-weight="600" font-size="11.5" fill="#f1f5fb" text-anchor="middle">
+      <text x="80" y="32">driver app</text><text x="260" y="32">gateway</text><text x="450" y="32">delivery</text>
+      <text x="650" y="32" fill="#fbbf24">Kafka</text><text x="850" y="32">order</text>
+    </g>
+    <g stroke="#ffffff" stroke-opacity="0.18" stroke-dasharray="3 4">
+      <line x1="80" y1="44" x2="80" y2="450"/><line x1="260" y1="44" x2="260" y2="450"/><line x1="450" y1="44" x2="450" y2="450"/>
+      <line x1="650" y1="44" x2="650" y2="450"/><line x1="850" y1="44" x2="850" y2="450"/>
+    </g>
+    <g font-size="10.5" fill="#f1f5fb">
+      <line x1="80" y1="80" x2="256" y2="80" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#dA)"/>
+      <text x="86" y="73">1. PUT /api/v1/deliveries/{id}/status</text>
+      <text x="86" y="95" fill="#9aa4b8">DRIVER token</text>
+
+      <line x1="260" y1="124" x2="446" y2="124" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#dA)"/>
+      <text x="266" y="117">2. + X-Auth-Driver-Id</text>
+      <text x="266" y="139" fill="#9aa4b8">only a driver token passes</text>
+
+      <rect x="426" y="154" width="48" height="44" rx="5" fill="#7aa2ff" fill-opacity="0.12" stroke="#7aa2ff" stroke-opacity="0.5"/>
+      <text x="482" y="170">3. must be this driver's job; save status</text>
+      <text x="482" y="186" fill="#9aa4b8">DELIVERED only with the customer's PIN</text>
+
+      <line x1="450" y1="226" x2="646" y2="226" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#dK)"/>
+      <text x="456" y="219">4a. publish DELIVERY_* (key = orderId)</text>
+      <line x1="650" y1="256" x2="846" y2="256" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#dK)"/>
+      <text x="656" y="249">5a. consume: map to order status</text>
+
+      <line x1="450" y1="300" x2="846" y2="300" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#dA)"/>
+      <text x="456" y="293">4b. PUT /api/v1/orders/{id}/status + X-Internal-Service-Token</text>
+      <text x="456" y="316" fill="#9aa4b8">3 retries with backoff, then parked in failed_events,</text>
+      <text x="456" y="330" fill="#9aa4b8">retried every 2 min for up to 24 h</text>
+
+      <rect x="826" y="350" width="48" height="76" rx="5" fill="#4ade80" fill-opacity="0.1" stroke="#4ade80" stroke-opacity="0.5"/>
+      <text x="820" y="366" text-anchor="end">6. skip if it would move the status backwards</text>
+      <text x="820" y="382" text-anchor="end" fill="#9aa4b8">PENDING &lt; PROCESSING &lt; SHIPPED &lt; DELIVERED &lt; CANCELLED</text>
+      <text x="820" y="402" text-anchor="end">on DELIVERED: cash orders marked paid,</text>
+      <text x="820" y="418" text-anchor="end">order_completed sent to the CDP</text>
+    </g>
+  </svg>
+  </div>
+  <p class="diagram-foot">Delivery status maps onto order status as: assigned or picked up &rarr; <b>PROCESSING</b>, in transit &rarr; <b>SHIPPED</b>, delivered &rarr; <b>DELIVERED</b>, and failed, cancelled, unreachable or returned &rarr; <b>CANCELLED</b>. The two paths (4a, 4b) can arrive in either order or twice; the backwards-status rule in step 6 makes that harmless.</p>
 </div>
-<div class="hl">
-  <h3>Deliveries that recover on their own</h3>
-  <p>Scheduled sweeps handle the real world. An assignment a driver hasn't picked up in 30 minutes goes back to the pool, a driver silent for 5 minutes is marked offline, and status updates that failed to send are retried from a queue every 2 minutes for up to 24 hours.</p>
+
+<h3 style="margin-top:36px">3. Failure and compensation</h3>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>When</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td>Wallet debit fails after commit</td><td>The order stays, its <code>paymentStatus</code> is written as <code>FAILED</code> in its own transaction and an ERROR is logged, so the unpaid order is visible to the merchant and queryable for reconciliation.</td></tr>
+    <tr><td>Order cancelled</td><td>Order publishes <code>ORDER_CANCELLED</code>. Catalog adds the items back to stock and marks them available; delivery cancels the job if the driver hasn't picked it up yet.</td></tr>
+    <tr><td>Delivery fails at the door</td><td>Failed, cancelled, customer unreachable and returned all map to order <code>CANCELLED</code>; the driver is freed and, for an unreachable customer, the customer is notified by SMS.</td></tr>
+    <tr><td>order-service down when a delivery moves</td><td>The HTTP update is retried three times with backoff, then stored in <code>failed_events</code> and retried every 2 minutes for 24 hours. The Kafka path delivers independently.</td></tr>
+    <tr><td>Delivery events out of order or repeated</td><td>Order ignores any status that ranks below the current one, so a late <code>DELIVERY_IN_TRANSIT</code> cannot undo <code>DELIVERED</code>.</td></tr>
+    <tr><td><code>ORDER_PLACED</code> delivered twice</td><td>Delivery creates a job only if none exists for the order id.</td></tr>
+    <tr><td>Payment webhook retried</td><td>The webhook is verified first (signature), then de-duplicated on the provider's event or transaction id, stored in a per-provider log with a unique key; a repeat returns 200 and changes nothing.</td></tr>
+    <tr><td>Driver goes quiet</td><td>A job assigned but not picked up for 30 minutes returns to the pool; a driver with no location update for 5 minutes is marked offline.</td></tr>
+    <tr><td>CDP unreachable</td><td>Events are retried with backoff (server errors only, never 4xx) and then logged and dropped; checkout and delivery never wait on the CDP.</td></tr>
+  </tbody>
+</table>
 </div>
-<div class="hl">
-  <h3>Proof at the door</h3>
-  <p>A delivery only completes with the PIN the customer received, so "delivered" means the customer had the parcel in hand, not that the driver tapped a button.</p>
+
+<h3 style="margin-top:36px">4. Event contracts</h3>
+<div class="code-pair">
+  <div>
+    <p class="code-label"><b>order.events</b> · ORDER_PLACED</p>
+<pre class="code">{
+  "eventId": "6f1c2b0e-…",
+  "eventType": "ORDER_PLACED",
+  "timestamp": "2026-10-07T09:14:22",
+  "orderId": 27,
+  "orderNumber": "ORD-1759828462000",
+  "customerId": 12,
+  "merchantId": 3,
+  "status": "PENDING",
+  "total": 750.00,
+  "paymentMethod": "wallet",
+  "pickupAddress": "…",
+  "deliveryAddress": "…",
+  "customerPhone": "…",
+  "items": [
+    { "productId": 41, "quantity": 3, "price": 250.00 }
+  ]
+}</pre>
+  </div>
+  <div>
+    <p class="code-label"><b>delivery.events</b> · DELIVERY_COMPLETED</p>
+<pre class="code">{
+  "eventId": "a93d…",
+  "eventType": "DELIVERY_COMPLETED",
+  "timestamp": "2026-10-07T10:02:51",
+  "deliveryId": 18,
+  "orderId": 27,
+  "driverId": 4,
+  "deliveryStatus": "DELIVERED",
+  "orderStatus": "DELIVERED",
+  "customerId": 12
+}</pre>
+    <p class="code-label" style="margin-top:16px"><b>to the CDP</b> · POST /v1/events (X-Api-Key)</p>
+<pre class="code">{
+  "event": "payment_completed",
+  "customer": { "email": "…", "phone": "…" },
+  "properties": {
+    "orderId": 27, "amount": 750.00,
+    "paymentMethod": "wallet",
+    "merchantId": "3", "spazaCustomerId": "12"
+  },
+  "correlationId": "order-27-paid"
+}</pre>
+  </div>
 </div>
-<div class="hl">
-  <h3>Reactions to segment changes, verified</h3>
-  <p>customer-service verifies each CDP callback's Ed25519 signature, then maps the segment to a signal: a browsing nudge, a support flag for delivery trouble, or a wallet suggestion for cash payers. Signals clear when the customer leaves the segment.</p>
+<p class="section-sub" style="margin-top:12px">CDP events identify the customer by email and phone rather than spaza's own id, and carry a correlation id derived from the business fact (<code>order-27-paid</code>), so the same fact reported from two code paths is stored once.</p>
+
+<h3 style="margin-top:36px">5. Tables per service</h3>
+<p class="section-sub">One PostgreSQL database; each table belongs to exactly one service.</p>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>Service</th><th>Tables</th><th>Key columns of the main table</th></tr></thead>
+  <tbody>
+    <tr><td>order</td><td><code>orders</code>, <code>order_items</code>, <code>order_history</code>, <code>shipping_config</code>, <code>shipping_quotes</code></td><td>orders: id, customer_id, merchant_id, order_number, status, payment_method, payment_status, total, tax, shipping, paid_at, shipping address</td></tr>
+    <tr><td>payment</td><td><code>customer_wallet</code>, <code>voucher</code>, <code>transactions</code>, <code>stripe_event_log</code>, provider event log, <code>merchant_payment_config</code>, <code>payment_config</code></td><td>transactions: id, order_id, amount, status, payment_method, external_transaction_id (unique per order + status)<br>customer_wallet: customer_id, balance</td></tr>
+    <tr><td>catalog</td><td><code>product</code>, <code>categories</code>, <code>product_images</code>, <code>product_type</code>, <code>product_attribute(_value)</code>, content tables</td><td>product: id, merchant_id, category_id, sku, name, price, quantity, available</td></tr>
+    <tr><td>delivery</td><td><code>deliveries</code>, <code>delivery_items</code>, <code>drivers</code>, <code>delivery_zones</code>, <code>peak_pricing</code>, <code>delivery_routes</code>, <code>delivery_ratings</code>, <code>delivery_messages</code>, <code>failed_events</code></td><td>deliveries: id, order_id, driver_id, status, delivery_pin, pickup and delivery coordinates, assigned_at, picked_up_at, delivered_at</td></tr>
+    <tr><td>customer</td><td><code>customers</code>, <code>customer_addresses</code>, <code>shopping_carts</code>, <code>cart_items</code>, <code>password_reset_tokens</code>, <code>customer_signals</code>, <code>cdp_deliveries</code></td><td>customer_signals: customer_id, kind, segment_code, rule_name, active, cleared_at<br>cdp_deliveries: delivery_id, event_id, action (de-duplicates callbacks)</td></tr>
+    <tr><td>merchant</td><td><code>users</code>, <code>user_role</code>, <code>merchant_store</code></td><td>users: id, email, password hash, active, groups (roles), merchant_store</td></tr>
+  </tbody>
+</table>
 </div>
-<div class="hl">
-  <h3>Run like production</h3>
-  <p>On AWS it runs on EKS in af-south-1 with RDS PostgreSQL, an NLB in front of NGINX ingress, and DNS in Route 53. PodDisruptionBudgets keep services up through node drains, and Prometheus, Grafana, Loki and Jaeger cover metrics, logs and traces. Terraform defines the AWS and Huawei Cloud environments.</p>
-</div>
+
+<h2>Security at the edge</h2>
+<ul class="points">
+  <li>The gateway verifies every token's signature, strips any identity headers the client sent, and sets its own from the verified claims. Services read identity only from those headers.</li>
+  <li><code>/private/**</code> and business analytics are staff-only. A driver can act only on deliveries and profile routes carrying their own driver id.</li>
+  <li>Staff tokens carry the staff member's <code>merchantId</code>; merchant payment configuration and store changes are allowed only for the caller's own merchant, or a platform admin.</li>
+  <li>Service-to-service endpoints (<code>/api/v1/internal/**</code>, order status from delivery) require a shared service token and are not routed by the gateway.</li>
+  <li>Payment-provider webhooks are rejected unless their signature verifies and the amount matches what was charged.</li>
+</ul>
+
+<h2>Known limits</h2>
+<ul class="points">
+  <li>Stock is decremented when <code>ORDER_PLACED</code> is consumed, not reserved at checkout, and the stock consumer does not yet de-duplicate by event id, so a redelivered event can decrement twice.</li>
+  <li>A provider-confirmed card or EFT payment updates payment-service's transaction; order-service is not yet told, so those orders' <code>paymentStatus</code> is not moved to PAID.</li>
+  <li>CDP events are retried but not stored in an outbox, so an event whose retries run out is lost to the CDP.</li>
+  <li>Rate limits and OTP codes live in one pod's memory; more replicas would need a shared store.</li>
+</ul>
 
 <h2>Tech stack</h2>
 <div class="stack-group">
   <p class="stack-label">Services</p>
   <div class="chips">
-    <span class="chip">Java 21</span><span class="chip">Spring Boot 3.4</span><span class="chip">Spring Cloud Gateway</span><span class="chip">Spring Kafka</span><span class="chip">WebSocket (STOMP)</span><span class="chip">PostgreSQL</span>
+    <span class="chip">Java 17</span><span class="chip">Spring Boot 2.7</span><span class="chip">Spring MVC</span><span class="chip">Spring Data JPA</span><span class="chip">Spring Kafka</span><span class="chip">WebSocket (STOMP)</span><span class="chip">PostgreSQL</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Gateway</p>
+  <div class="chips">
+    <span class="chip">Java 21</span><span class="chip">Spring Boot 3.4</span><span class="chip">Spring Cloud Gateway</span><span class="chip">WebFlux</span><span class="chip">JJWT</span>
   </div>
 </div>
 <div class="stack-group">
@@ -189,7 +442,7 @@
 <div class="stack-group">
   <p class="stack-label">Quality</p>
   <div class="chips">
-    <span class="chip">JUnit 5</span><span class="chip">Mockito</span><span class="chip">139 test classes</span><span class="chip">SonarCloud</span>
+    <span class="chip">JUnit 5</span><span class="chip">Mockito</span><span class="chip">SonarCloud</span>
   </div>
 </div>
 
@@ -197,7 +450,7 @@
 <p class="section-sub">One GitLab pipeline builds and tests every service, gates on SonarCloud, then pushes images and deploys to whichever cluster the job targets: Amazon EKS or Huawei Cloud.</p>
 <div class="pipeline-scroll">
   <div class="pipeline">
-    <div class="stage"><span class="s-name">build</span><span class="s-meta">Maven, JDK 21</span></div>
+    <div class="stage"><span class="s-name">build</span><span class="s-meta">Maven</span></div>
     <div class="stage"><span class="s-name">test</span><span class="s-meta">JUnit 5</span></div>
     <div class="stage quality"><span class="s-name">sonar</span><span class="s-meta">SonarCloud gate</span></div>
     <div class="stage"><span class="s-name">push</span><span class="s-meta">ECR or Huawei SWR</span></div>

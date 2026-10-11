@@ -241,6 +241,19 @@ figure.run figcaption { color: var(--muted); font-size: 0.88rem; margin-top: 10p
 .points { margin: 0; padding-left: 1.2em; max-width: 68ch; }
 .points li { margin: 0 0 8px; }
 
+/* Spec tables: services, topics, schemas. Scroll sideways on narrow screens. */
+.spec-scroll { overflow-x: auto; margin: 18px 0 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table.spec { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.86rem; }
+table.spec th, table.spec td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+table.spec tr:last-child td { border-bottom: 0; }
+table.spec th { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+table.spec td:first-child { font-weight: 600; white-space: nowrap; }
+table.spec code { font-size: 0.8em; }
+
+/* Side-by-side code samples (event payloads) */
+.code-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 18px 0 0; }
+.code-pair .code-label { margin: 0 0 6px; }
+
 footer {
   color: var(--muted); margin-top: 80px; padding-top: 28px; border-top: 1px solid var(--line);
   font-size: 0.9rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
