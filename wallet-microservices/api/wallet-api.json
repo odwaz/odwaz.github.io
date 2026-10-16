@@ -1,0 +1,1669 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Wallet API",
+    "version": "1.0.0",
+    "description": "The public API of the wallet: five Spring Boot WebFlux services behind one gateway.\n\n**Signing in takes two calls.** `POST /oauth/login` checks the password and sends a one-time code to the\naccount's phone; `POST /oauth2/token` exchanges the code for a Bearer token. Every wallet call needs\n`Authorization: Bearer <token>`.\n\n**Money calls are idempotent.** Top up, transfer and withdraw require an `Idempotency-Key` header: a retry\nwith the same key returns the first result instead of moving money twice.\n\n**Every movement is a balanced journal** in a double-entry ledger; `GET /api/v1/wallets/{id}/reconcile`\ncompares a wallet's balance with its ledger."
+  },
+  "servers": [
+    {
+      "url": "./sandbox",
+      "description": "Sandbox: simulated responses, computed in your browser"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Create an account and its wallet. No token is needed.",
+      "name": "Sign up"
+    },
+    {
+      "description": "Two steps: check the password (a one-time code is sent to the phone), then exchange the code for a Bearer token. No token is needed for these calls.",
+      "name": "Sign in"
+    },
+    {
+      "description": "Your wallet: balance, history, top up, transfer and withdraw. Every call needs `Authorization: Bearer <token>` from sign-in; you can only act on your own wallet.",
+      "name": "Wallet"
+    },
+    {
+      "description": "What a movement will cost, before making it.",
+      "name": "Fees"
+    }
+  ],
+  "paths": {
+    "/oauth/login": {
+      "post": {
+        "description": "Checks the e-mail and password. On success a 6-digit one-time code is sent to the account's phone; exchange it for a token at `POST /oauth2/token`.",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "message": "Credentials verified. OTP sent to your phone."
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Password correct; a code was sent to the phone."
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Invalid credentials"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unknown e-mail or wrong password."
+          }
+        },
+        "summary": "Sign in, step 1: check the password",
+        "tags": [
+          "Sign in"
+        ]
+      }
+    },
+    "/oauth/send-otp": {
+      "post": {
+        "description": "Same as `POST /oauth/login`, but the account can be named by `phoneNumber` instead of `email`.",
+        "operationId": "sendOtp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendOtpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "message": "OTP sent successfully"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Password correct; a code was sent to the phone."
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Failed to send OTP"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unknown account or wrong password."
+          }
+        },
+        "summary": "Sign in by e-mail or phone, step 1: send a one-time code",
+        "tags": [
+          "Sign in"
+        ]
+      }
+    },
+    "/oauth2/token": {
+      "post": {
+        "description": "OAuth2 token endpoint with the `otp` grant. The returned `access_token` authorises every wallet call: send it as `Authorization: Bearer <token>`. A code works once.",
+        "operationId": "token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Code accepted."
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "invalid_grant",
+                  "error_description": "Invalid OTP"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthErrorResponse"
+                }
+              }
+            },
+            "description": "Wrong or used code, or a grant type other than otp."
+          }
+        },
+        "summary": "Sign in, step 2: exchange the one-time code for a token",
+        "tags": [
+          "Sign in"
+        ]
+      }
+    },
+    "/api/v1/walletusers/register": {
+      "post": {
+        "description": "Creates the login (auth-service) and a ZAR wallet whose alias is derived from the full name. Then sign in with `POST /oauth/login`.",
+        "operationId": "register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "message": "User and wallet created successfully"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Account and wallet created."
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Registration failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "A field is missing, or the e-mail is already registered."
+          }
+        },
+        "summary": "Create an account and wallet",
+        "tags": [
+          "Sign up"
+        ]
+      }
+    },
+    "/api/v1/wallets/me": {
+      "get": {
+        "description": "The wallet of the signed-in user, found from the token alone.",
+        "operationId": "getMyWallet",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletResponse"
+                }
+              }
+            },
+            "description": "Your wallet."
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Unauthorized",
+                  "message": "Missing or invalid Authorization header"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayErrorResponse"
+                }
+              }
+            },
+            "description": "No token, or an invalid or expired token (answered by the API gateway)."
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wallet"
+                }
+              }
+            },
+            "description": "You have no wallet yet."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get my wallet",
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallets/user/balance": {
+      "get": {
+        "description": "Balance and currency of the signed-in user's wallet.",
+        "operationId": "getUserBalance",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BalanceResponse"
+                }
+              }
+            },
+            "description": "Your balance (zero with a message if you have no wallet)."
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Unauthorized",
+                  "message": "Missing or invalid Authorization header"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayErrorResponse"
+                }
+              }
+            },
+            "description": "No token, or an invalid or expired token (answered by the API gateway)."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get my balance",
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallets/{id}": {
+      "get": {
+        "description": "Your wallet by its ID. Another user's wallet is refused.",
+        "operationId": "getWallet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletResponse"
+                }
+              }
+            },
+            "description": "Your wallet."
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Unauthorized",
+                  "message": "Missing or invalid Authorization header"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayErrorResponse"
+                }
+              }
+            },
+            "description": "No token, or an invalid or expired token (answered by the API gateway)."
+          },
+          "403": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "This wallet does not belong to you"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The wallet is not yours."
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Wallet 1077 not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such wallet."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get a wallet by ID",
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallets/user/{userId}": {
+      "get": {
+        "description": "Only your own user ID is allowed.",
+        "operationId": "getWalletByUser",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletResponse"
+                }
+              }
+            },
+            "description": "Your wallet."
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Unauthorized",
+                  "message": "Missing or invalid Authorization header"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayErrorResponse"
+                }
+              }
+            },
+            "description": "No token, or an invalid or expired token (answered by the API gateway)."
+          },
+          "403": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "You can only view your own wallet"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The user ID is not yours."
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wallet"
+                }
+              }
+            },
+            "description": "That user has no wallet."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get a wallet by user ID",
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallets/{id}/transactions": {
+      "get": {
+        "description": "Every deposit, withdrawal and transfer on your wallet.",
+        "operationId": "getTransactions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransactionRecord"
+                  }
+                }
+              }
+            },
+            "description": "The history."
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Unauthorized",
+                  "message": "Missing or invalid Authorization header"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayErrorResponse"
+                }
+              }
+            },
+            "description": "No token, or an invalid or expired token (answered by the API gateway)."
+          },
+          "403": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "This wallet does not belong to you"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The wallet is not yours."
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Wallet 1077 not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such wallet."
+          },
+          "503": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Transaction history is temporarily unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The transaction history service is unavailable."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List a wallet's transactions",
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallets/{id}/reconcile": {
+      "get": {
+        "description": "Compares the balance stored on your wallet with the balance summed from its ledger entries. They never differ unless something wrote a balance outside the ledger.",
+        "operationId": "reconcile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileResponse"
+                }
+              }
+            },
+            "description": "The comparison."
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Unauthorized",
+                  "message": "Missing or invalid Authorization header"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayErrorResponse"
+                }
+              }
+            },
+            "description": "No token, or an invalid or expired token (answered by the API gateway)."
+          },
+          "403": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "This wallet does not belong to you"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The wallet is not yours."
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Wallet 1077 not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such wallet."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Check a wallet against its ledger",
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallets/topup": {
+      "post": {
+        "description": "Adds money to your own wallet, named by alias or ID. Posted to the double-entry ledger as a balanced journal; the response carries the new balance.",
+        "operationId": "topup",
+        "parameters": [
+          {
+            "description": "Unique per money call, at most 100 characters. Retrying with the same key returns the first result instead of moving money twice; reusing a key with a different body is refused (409).",
+            "example": "2b7f9c4e-1a6d-4e0b-8c3f-5d9a7e2c1b60",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopUpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoneyMovementResponse"
+                }
+              }
+            },
+            "description": "Added."
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Either walletAlias or walletId is required"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing Idempotency-Key, no walletAlias or walletId, or an amount of zero or less."
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Unauthorized",
+                  "message": "Missing or invalid Authorization header"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayErrorResponse"
+                }
+              }
+            },
+            "description": "No token, or an invalid or expired token (answered by the API gateway)."
+          },
+          "403": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "This wallet does not belong to you"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The wallet is not yours."
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Wallet not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such wallet."
+          },
+          "409": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Idempotency-Key user:42:2b7f9c4e-1a6d-4e0b-8c3f-5d9a7e2c1b60 was already used for a different request"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Idempotency-Key reused with a different body, or the first call is still running."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Top up my wallet",
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallets/transfer": {
+      "post": {
+        "description": "Moves money from your own wallet to any other wallet, both named by alias. Debit and credit are one balanced ledger journal: both happen or neither does.",
+        "operationId": "transfer",
+        "parameters": [
+          {
+            "description": "Unique per money call, at most 100 characters. Retrying with the same key returns the first result instead of moving money twice; reusing a key with a different body is refused (409).",
+            "example": "2b7f9c4e-1a6d-4e0b-8c3f-5d9a7e2c1b60",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoneyMovementResponse"
+                }
+              }
+            },
+            "description": "Sent."
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Idempotency-Key header is required"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing Idempotency-Key, or an amount of zero or less."
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Unauthorized",
+                  "message": "Missing or invalid Authorization header"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayErrorResponse"
+                }
+              }
+            },
+            "description": "No token, or an invalid or expired token (answered by the API gateway)."
+          },
+          "403": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "This wallet does not belong to you"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The source wallet is not yours."
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Source wallet not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The source or destination wallet does not exist."
+          },
+          "409": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Idempotency-Key user:42:2b7f9c4e-1a6d-4e0b-8c3f-5d9a7e2c1b60 was already used for a different request"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Idempotency-Key reused with a different body, or the first call is still running."
+          },
+          "422": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Insufficient balance in wallet 1042"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not enough money in the source wallet."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Send money to another wallet",
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/wallets/{id}/balance": {
+      "put": {
+        "description": "Takes money out of your own wallet (operation SUBTRACT). Money comes in through `POST /api/v1/wallets/topup`; ADD is refused for users.",
+        "operationId": "updateBalance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "description": "Unique per money call, at most 100 characters. Retrying with the same key returns the first result instead of moving money twice; reusing a key with a different body is refused (409).",
+            "example": "2b7f9c4e-1a6d-4e0b-8c3f-5d9a7e2c1b60",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BalanceChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoneyMovementResponse"
+                }
+              }
+            },
+            "description": "Withdrawn."
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Idempotency-Key header is required"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing Idempotency-Key, or an operation other than ADD or SUBTRACT."
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Unauthorized",
+                  "message": "Missing or invalid Authorization header"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayErrorResponse"
+                }
+              }
+            },
+            "description": "No token, or an invalid or expired token (answered by the API gateway)."
+          },
+          "403": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Use top up to add funds"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not your wallet, or ADD attempted."
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Wallet 1077 not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such wallet."
+          },
+          "409": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Idempotency-Key user:42:2b7f9c4e-1a6d-4e0b-8c3f-5d9a7e2c1b60 was already used for a different request"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Idempotency-Key reused with a different body, or the first call is still running."
+          },
+          "422": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "error": "Insufficient balance in wallet 1042"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not enough money in the wallet."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Withdraw from a wallet",
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/fees/calculate": {
+      "post": {
+        "description": "TRANSFER costs 1% and WITHDRAWAL 2% of the amount, rounded half-up to cents. Any other type is free.",
+        "operationId": "calculateFee",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "example": {
+                  "fee": 1.2
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FeeResponse"
+                }
+              }
+            },
+            "description": "The fee."
+          },
+          "401": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeeResponse"
+                }
+              }
+            },
+            "description": "No token, or an invalid or expired token (answered by the API gateway)."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Calculate a fee",
+        "tags": [
+          "Fees"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BalanceChangeRequest": {
+        "type": "object",
+        "description": "Take money out of your own wallet. Users may only SUBTRACT; money comes in through top up.",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Amount; must be greater than zero.",
+            "example": 200
+          },
+          "description": {
+            "type": "string",
+            "default": "Balance adjustment",
+            "description": "Shown in the transaction history.",
+            "example": "Cash out"
+          },
+          "operation": {
+            "type": "string",
+            "description": "SUBTRACT for a withdrawal. ADD is refused for users (use top up).",
+            "enum": [
+              "SUBTRACT",
+              "ADD"
+            ],
+            "example": "SUBTRACT"
+          }
+        },
+        "required": [
+          "amount",
+          "operation"
+        ]
+      },
+      "BalanceResponse": {
+        "type": "object",
+        "description": "The caller's balance.",
+        "properties": {
+          "balance": {
+            "type": "number",
+            "description": "Current balance.",
+            "example": 1250
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code.",
+            "example": "ZAR"
+          },
+          "message": {
+            "type": "string",
+            "description": "Only present when the caller has no wallet.",
+            "example": "No wallet found"
+          },
+          "walletId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Wallet ID; absent when the caller has no wallet.",
+            "example": 1042
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "A failed call.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Why the call failed.",
+            "example": "Invalid credentials"
+          }
+        }
+      },
+      "FeeRequest": {
+        "type": "object",
+        "description": "The movement to price.",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Amount of the movement.",
+            "example": 120
+          },
+          "transactionType": {
+            "type": "string",
+            "description": "Kind of movement.",
+            "enum": [
+              "TRANSFER",
+              "WITHDRAWAL",
+              "DEPOSIT"
+            ],
+            "example": "TRANSFER"
+          }
+        },
+        "required": [
+          "amount",
+          "transactionType"
+        ]
+      },
+      "FeeResponse": {
+        "type": "object",
+        "description": "The fee for the movement.",
+        "properties": {
+          "fee": {
+            "type": "number",
+            "description": "Fee in the movement's currency.",
+            "example": 1.2
+          }
+        }
+      },
+      "GatewayErrorResponse": {
+        "type": "object",
+        "description": "Rejected by the API gateway before reaching the service: no token, or a token that is invalid or expired.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Short reason.",
+            "example": "Unauthorized"
+          },
+          "message": {
+            "type": "string",
+            "description": "Details.",
+            "example": "Missing or invalid Authorization header"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "E-mail and password of an existing account.",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The account's e-mail address.",
+            "example": "demo@wallet.example"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "The account's password.",
+            "example": "demo-password"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "MessageResponse": {
+        "type": "object",
+        "description": "A plain confirmation.",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "What happened.",
+            "example": "OTP sent successfully"
+          }
+        }
+      },
+      "MoneyMovementResponse": {
+        "type": "object",
+        "description": "A completed money movement, posted to the double-entry ledger.",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Amount moved.",
+            "example": 500
+          },
+          "balanceAfter": {
+            "type": "number",
+            "description": "Your wallet's balance after the movement.",
+            "example": 1750
+          },
+          "journalRef": {
+            "type": "string",
+            "description": "Reference of the balanced ledger journal that records it (the transaction ID).",
+            "example": "6f1c2b9e-4d3a-4b8e-9f21-0c7d5a1e8b42"
+          },
+          "status": {
+            "type": "string",
+            "description": "Always COMPLETED; a movement that does not complete returns an error instead.",
+            "example": "COMPLETED"
+          },
+          "transactionId": {
+            "type": "string",
+            "description": "ID of the transaction.",
+            "example": "6f1c2b9e-4d3a-4b8e-9f21-0c7d5a1e8b42"
+          }
+        }
+      },
+      "OAuthErrorResponse": {
+        "type": "object",
+        "description": "A failed OAuth2 token request, in the OAuth2 error format.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "OAuth2 error code.",
+            "enum": [
+              "invalid_grant",
+              "unsupported_grant_type"
+            ],
+            "example": "invalid_grant"
+          },
+          "error_description": {
+            "type": "string",
+            "description": "Human-readable reason.",
+            "example": "Invalid OTP"
+          }
+        }
+      },
+      "ReconcileResponse": {
+        "type": "object",
+        "description": "The wallet's cached balance compared with the balance derived from its ledger entries.",
+        "properties": {
+          "balanced": {
+            "type": "boolean",
+            "description": "True when the two agree.",
+            "example": true
+          },
+          "cachedBalance": {
+            "type": "number",
+            "description": "Balance stored on the wallet.",
+            "example": 1250
+          },
+          "ledgerBalance": {
+            "type": "number",
+            "description": "Balance summed from the ledger.",
+            "example": 1250
+          },
+          "walletId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Wallet ID.",
+            "example": 1042
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "description": "A new account. Creates the login and a ZAR wallet in one call.",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "E-mail address; used to sign in.",
+            "example": "demo@wallet.example"
+          },
+          "fullName": {
+            "type": "string",
+            "description": "The person's full name. The wallet alias is derived from it.",
+            "example": "Demo User"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "Password for signing in.",
+            "example": "demo-password"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "description": "Phone number in international format; one-time sign-in codes go here.",
+            "example": "+27825550142"
+          }
+        },
+        "required": [
+          "email",
+          "fullName",
+          "password",
+          "phoneNumber"
+        ]
+      },
+      "SendOtpRequest": {
+        "type": "object",
+        "description": "The account to send a code to, by e-mail or phone number, and its password.",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The account's e-mail address. Send this or phoneNumber.",
+            "example": "demo@wallet.example"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "The account's password.",
+            "example": "demo-password"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "description": "The account's phone number in international format. Used when email is absent.",
+            "example": "+27825550142"
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "TokenRequest": {
+        "type": "object",
+        "description": "OAuth2 token request with the OTP grant: the one-time code sent after a successful sign-in.",
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "description": "Always otp.",
+            "enum": [
+              "otp"
+            ],
+            "example": "otp"
+          },
+          "otp_code": {
+            "type": "string",
+            "description": "The 6-digit code that was sent to the account's phone.",
+            "example": 123456,
+            "pattern": "^\\d{6}$"
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "The phone number used to sign in. Used when username is absent.",
+            "example": "+27825550142"
+          },
+          "username": {
+            "type": "string",
+            "description": "The e-mail address used to sign in. Send this or phone_number.",
+            "example": "demo@wallet.example"
+          }
+        },
+        "required": [
+          "grant_type",
+          "otp_code"
+        ]
+      },
+      "TokenResponse": {
+        "type": "object",
+        "description": "An access token for the wallet API.",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "JWT to send as `Authorization: Bearer <token>` on every wallet call.",
+            "example": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkZW1vQHdhbGxldC5leGFtcGxlIiwidXNlcklkIjo0Mn0.c2lnbmF0dXJl"
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Seconds until the token expires.",
+            "example": 3600
+          },
+          "scope": {
+            "type": "string",
+            "description": "Granted scopes.",
+            "example": "read write"
+          },
+          "token_type": {
+            "type": "string",
+            "description": "Always Bearer.",
+            "example": "Bearer"
+          }
+        }
+      },
+      "TopUpRequest": {
+        "type": "object",
+        "description": "Add money to your own wallet, named by alias or ID.",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Amount to add; must be greater than zero.",
+            "example": 500
+          },
+          "description": {
+            "type": "string",
+            "default": "Top up",
+            "description": "Shown in the transaction history.",
+            "example": "Salary"
+          },
+          "walletAlias": {
+            "type": "string",
+            "description": "Your wallet's alias. Send this or walletId.",
+            "example": "demouser1760000000000"
+          },
+          "walletId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Your wallet's ID. Used when walletAlias is absent.",
+            "example": 1042
+          }
+        },
+        "required": [
+          "amount"
+        ]
+      },
+      "TransactionRecord": {
+        "type": "object",
+        "description": "One entry in a wallet's transaction history.",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Amount.",
+            "example": 120
+          },
+          "balanceAfter": {
+            "type": "number",
+            "description": "Sender's balance after.",
+            "example": 1130
+          },
+          "balanceBefore": {
+            "type": "number",
+            "description": "Sender's balance before.",
+            "example": 1250
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it was recorded.",
+            "example": "2026-10-12T09:41:05"
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code.",
+            "example": "ZAR"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description given by the caller.",
+            "example": "Groceries split"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Row ID.",
+            "example": 311
+          },
+          "merchantId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Merchant, if any.",
+            "example": null
+          },
+          "recipientWalletId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Wallet the money reached, if any.",
+            "example": 1077
+          },
+          "senderWalletId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Wallet the money left, if any.",
+            "example": 1042
+          },
+          "status": {
+            "type": "string",
+            "description": "Status.",
+            "example": "COMPLETED"
+          },
+          "transactionId": {
+            "type": "string",
+            "description": "Transaction ID.",
+            "example": "6f1c2b9e-4d3a-4b8e-9f21-0c7d5a1e8b42"
+          },
+          "transactionType": {
+            "type": "string",
+            "description": "Kind of movement.",
+            "enum": [
+              "DEPOSIT",
+              "WITHDRAWAL",
+              "TRANSFER"
+            ],
+            "example": "TRANSFER"
+          },
+          "userEmail": {
+            "type": "string",
+            "description": "E-mail of the user who made it.",
+            "example": "demo@wallet.example"
+          },
+          "userPhone": {
+            "type": "string",
+            "description": "Phone of the user who made it.",
+            "example": "+27825550142"
+          }
+        }
+      },
+      "TransferRequest": {
+        "type": "object",
+        "description": "Send money from your own wallet to another wallet, both named by alias.",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Amount to send; must be greater than zero and covered by your balance.",
+            "example": 120
+          },
+          "description": {
+            "type": "string",
+            "default": "Transfer",
+            "description": "Shown in both wallets' history.",
+            "example": "Groceries split"
+          },
+          "fromWalletAlias": {
+            "type": "string",
+            "description": "Your wallet's alias; it must be yours.",
+            "example": "demouser1760000000000"
+          },
+          "toWalletAlias": {
+            "type": "string",
+            "description": "The recipient's wallet alias.",
+            "example": "thandi1760000000001"
+          }
+        },
+        "required": [
+          "amount",
+          "fromWalletAlias",
+          "toWalletAlias"
+        ]
+      },
+      "Wallet": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "balance": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "walletAlias": {
+            "type": "string"
+          },
+          "walletId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "WalletResponse": {
+        "type": "object",
+        "description": "A wallet.",
+        "properties": {
+          "active": {
+            "type": "boolean",
+            "description": "False once the wallet is closed.",
+            "example": true
+          },
+          "balance": {
+            "type": "number",
+            "description": "Current balance.",
+            "example": 1250
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code.",
+            "example": "ZAR"
+          },
+          "merchantId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Merchant the wallet belongs to, if any.",
+            "example": null
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The owning user's ID.",
+            "example": 42
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Optimistic-lock version; increases with every change.",
+            "example": 7
+          },
+          "walletAlias": {
+            "type": "string",
+            "description": "Public alias other users pay to.",
+            "example": "demouser1760000000000"
+          },
+          "walletId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Wallet ID.",
+            "example": 1042
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "bearerFormat": "JWT",
+        "description": "The access_token from POST /oauth2/token.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  }
+}
