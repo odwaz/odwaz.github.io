@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Odwa Matiwane — Backend &amp; DevOps Engineer</title>
-<meta name="description" content="Backend &amp; DevOps engineer. Event-driven Java/Spring microservices, and the Terraform-provisioned AWS platform and CI/CD that ships them.">
-<meta property="og:title" content="Odwa Matiwane — Backend &amp; DevOps Engineer">
+<title>Odwa Matiwane — Java Developer, building with Agentic AI</title>
+<meta name="description" content="Java developer building with agentic AI. Event-driven Java/Spring microservices, and the Terraform-provisioned AWS platform and CI/CD that ships them.">
+<meta property="og:title" content="Odwa Matiwane — Java Developer, building with Agentic AI">
 <meta property="og:description" content="Event-driven Java/Spring microservices, and the platform that ships them.">
 <meta property="og:image" content="https://odwaz.github.io/media/gimba-run.jpg">
 <meta name="theme-color" content="#16181b">
@@ -206,6 +206,60 @@
   .project p { margin: 0 0 14px; color: var(--ink); font-size: 0.97rem; }
   .project .stack { margin-top: auto; padding-top: 4px; }
   .project .readmore { margin-bottom: 16px; }
+  /* Agent orchestration: one lane per party, steps left to right in order */
+  .flow {
+    --ok: #2f7d4f; --bad: #b4443a;
+    display: grid; grid-template-columns: 136px repeat(10, minmax(0, 1fr));
+    grid-template-rows: repeat(3, 172px);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    overflow: hidden; margin: 0 0 12px;
+  }
+  @media (prefers-color-scheme: dark) { .flow { --ok: #6cc28c; --bad: #e07a70; } }
+  .flow .lane { grid-column: 1 / -1; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 10px; padding: 0 14px; }
+  .flow .lane:first-child { border-top: 0; }
+  .flow .lane svg { width: 34px; height: 34px; flex: none; padding: 7px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface);
+    fill: none; stroke: var(--ink); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .flow .lane.you svg { background: var(--brass-bright); border-color: var(--brass-bright); stroke: var(--forest); }
+  .flow .lane.model svg { border-style: dashed; border-color: var(--brass); stroke: var(--brass); }
+  .flow .lane b { font-family: var(--display); font-size: 0.98rem; line-height: 1.2; }
+  .flow .lane small { display: block; color: var(--muted); font-size: 0.76rem; font-weight: 400; }
+  .flow .lane.you { grid-row: 1; } .flow .lane.code { grid-row: 2; background: var(--paper); } .flow .lane.model { grid-row: 3; }
+  .flow .wires { grid-column: 2 / -1; grid-row: 1 / -1; width: 100%; height: 100%; z-index: 1; }
+  .flow .wires path { fill: none; stroke: var(--muted); stroke-opacity: .5; stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .flow .wires path.ai { stroke: var(--brass); stroke-opacity: .9; stroke-dasharray: 5 4; }
+  .flow ol { display: contents; list-style: none; }
+  .step {
+    grid-row: var(--lane); grid-column: calc(var(--n) + 1); align-self: center; z-index: 2;
+    margin: 0 3px; padding: 7px 6px 9px; border-radius: 9px;
+    background: var(--surface); border: 1.5px solid var(--ink);
+    font-size: 0.79rem; line-height: 1.3;
+  }
+  .step b { display: block; font-weight: 600; }
+  .step > span:not(.n):not(.who):not(.art) { display: block; color: var(--muted); font-size: 0.7rem; margin-top: 2px; }
+  .step .n { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); }
+  .step .who { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .step.you { background: var(--brass-bright); border-color: var(--brass-bright); color: var(--forest); }
+  .step.you > span, .step.you .n { color: rgba(22, 24, 27, 0.7); }
+  .step.model { border-style: dashed; border-color: var(--brass); }
+  /* What each step produces, drawn small */
+  .art { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-height: 22px; margin: 4px 0 5px; }
+  .art svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .art .pill { font-family: var(--mono); font-size: 0.58rem; line-height: 1; padding: 3px 5px; border-radius: 99px; background: var(--forest); color: var(--brass-bright); white-space: nowrap; }
+  .art .snip, .art .diff, .art .checks { display: block; width: 100%; font-family: var(--mono); font-size: 0.56rem; line-height: 1.45; padding: 4px 4px; border-radius: 5px; background: var(--paper); border: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+  .art .snip i { font-style: normal; color: var(--brass); }
+  .art .diff .add { color: var(--ok); display: block; } .art .diff .del { color: var(--bad); display: block; }
+  .art .checks span { color: var(--ok); display: block; }
+  .flow-note { color: var(--muted); font-size: 0.9rem; max-width: 72ch; margin: 0 0 28px; }
+  @media (max-width: 900px) {
+    .flow { display: block; padding: 8px 16px; }
+    .flow .lane, .flow .wires { display: none; }
+    .flow ol { display: block; margin: 0; padding: 0; border-left: 2px solid var(--line); }
+    .step { margin: 10px 0 10px 14px; position: relative; }
+    .step::before { content: ""; position: absolute; left: -22px; top: 14px; width: 12px; height: 2px; background: var(--line); }
+    .step .who { position: static; width: auto; height: auto; clip: auto; display: inline; font-family: var(--mono); font-size: 0.68rem; color: inherit; opacity: .75; margin-left: 6px; }
+    .art .snip, .art .diff, .art .checks { width: auto; display: inline-block; }
+  }
+
   .clip { margin: 20px 0 0; }
   .clip video {
     display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover;
@@ -214,7 +268,7 @@
   .clip figcaption { color: var(--muted); font-size: 0.82rem; margin-top: 8px; }
 
   /* Skills: build side / run side */
-  .sides { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 2px solid var(--ink); }
+  .sides { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 2px solid var(--ink); }
   .side { padding: 20px 24px 0 0; }
   .side h3 { font-size: 1.15rem; margin-bottom: 8px; }
   .side p { margin: 0; color: var(--muted); font-size: 0.97rem; }
@@ -257,11 +311,12 @@
 <div class="hero">
   <div class="wrap">
     <h1>Odwa Matiwane</h1>
-    <p class="role">Backend &amp; DevOps engineer</p>
+    <p class="role">Java developer &middot; building with agentic AI</p>
     <p class="pitch">
       Cloud-native backend systems in Java and Spring Boot: <strong>a real-time customer data platform on Kafka</strong>,
       <strong>a double-entry wallet</strong>, and <strong>ordering and delivery for spaza shops</strong>.
       Each one ships with its own Terraform, Kubernetes manifests and CI/CD pipeline, and deploys to AWS.
+      Alongside them, <strong>an agent orchestrator</strong> that turns a labelled GitHub issue into a reviewed spec and a tested draft pull request.
     </p>
     <div class="actions">
       <a class="btn primary" href="#projects">See the projects</a>
@@ -388,6 +443,39 @@
   </div>
 </section>
 
+<section class="block" id="agents">
+  <h2>Agent orchestration</h2>
+  <p class="intro">Coding agents work inside plain, deterministic code. The orchestrator decides who asked, which repository, which files and whether the tests pass. It calls a model at exactly two points, and a person approves at three.</p>
+  <div class="flow" role="figure" aria-label="The path of one GitHub issue to a merged pull request, across you, the orchestrator and the models">
+    <div class="lane you" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 20c.9-3.8 3.8-5.8 7.2-5.8s6.3 2 7.2 5.8"/></svg><b>You<small>approve</small></b></div>
+    <div class="lane code" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8.5 7L3.5 12l5 5M15.5 7l5 5-5 5"/></svg><b>Orchestrator<small>plain code</small></b></div>
+    <div class="lane model" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5c.6 4.4 2.9 7 8 8.5-5.1 1.5-7.4 4.1-8 8.5-.6-4.4-2.9-7-8-8.5 5.1-1.5 7.4-4.1 8-8.5z"/></svg><b>Models<small>called, never in control</small></b></div>
+    <svg class="wires" viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true"><path d="M50 50 C105 50 95 150 150 150"/><path class="ai" d="M150 150 C205 150 195 250 250 250"/><path class="ai" d="M250 250 C305 250 295 50 350 50"/><path d="M350 50 C405 50 395 150 450 150"/><path d="M450 150 C505 150 495 50 550 50"/><path d="M550 50 C605 50 595 150 650 150"/><path class="ai" d="M650 150 C705 150 695 250 750 250"/><path class="ai" d="M750 250 C805 250 795 150 850 150"/><path d="M850 150 C905 150 895 50 950 50"/></svg>
+    <ol role="list">
+      <li class="step you" style="--n:1;--lane:1"><span class="n">1</span><span class="who">You</span><span class="art" aria-hidden="true"><span class="pill">needs-spec</span></span><b>Label the issue</b></li>
+      <li class="step code" style="--n:2;--lane:2"><span class="n">2</span><span class="who">Orchestrator</span><span class="art" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M8.8 12.2l2.2 2.2 4.4-4.6"/></svg></span><b>Check and gather</b><span>who asked, which repo</span></li>
+      <li class="step model" style="--n:3;--lane:3"><span class="n">3</span><span class="who">Model</span><span class="art" aria-hidden="true"><span class="snip">{<i>"goal"</i>,<br>&nbsp;<i>"files"</i>}</span></span><b>Claude drafts the spec</b><span>no tools</span></li>
+      <li class="step you" style="--n:4;--lane:1"><span class="n">4</span><span class="who">You</span><span class="art" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2.2"/><circle cx="6" cy="18.5" r="2.2"/><circle cx="18" cy="18.5" r="2.2"/><path d="M6 7.7v8.6M18 16.3V9a3 3 0 0 0-3-3h-4"/><path d="M13 3.6L10.6 6 13 8.4"/></svg></span><b>Review the spec</b><span>merge the spec PR</span></li>
+      <li class="step code" style="--n:5;--lane:2"><span class="n">5</span><span class="who">Orchestrator</span><span class="art" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 15.5h6M9 9h2"/></svg></span><b>Write it to the issue</b><span>request kept</span></li>
+      <li class="step you" style="--n:6;--lane:1"><span class="n">6</span><span class="who">You</span><span class="art" aria-hidden="true"><span class="pill">agent-ready</span></span><b>Approve the work</b></li>
+      <li class="step code" style="--n:7;--lane:2"><span class="n">7</span><span class="who">Orchestrator</span><span class="art" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg></span><b>Prepare a checkout</b><span>read-only, source files only</span></li>
+      <li class="step model" style="--n:8;--lane:3"><span class="n">8</span><span class="who">Model</span><span class="art" aria-hidden="true"><span class="diff"><span class="add">+ refund()</span><span class="del">- todo</span></span></span><b>Codex edits</b><span>only the patch leaves</span></li>
+      <li class="step code" style="--n:9;--lane:2"><span class="n">9</span><span class="who">Orchestrator</span><span class="art" aria-hidden="true"><span class="checks"><span>✓ tests</span><span>✓ build</span></span></span><b>Test on a clean runner</b><span>then a draft PR</span></li>
+      <li class="step you" style="--n:10;--lane:1"><span class="n">10</span><span class="who">You</span><span class="art" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2.2"/><circle cx="6" cy="18.5" r="2.2"/><circle cx="18" cy="12" r="2.2"/><path d="M6 7.7v8.6M6.6 7.6c1 3 4.4 4.4 9.2 4.4"/></svg></span><b>Merge the PR</b></li>
+    </ol>
+  </div>
+  <p class="flow-note">Every handoff to a model goes through the orchestrator, and nothing a model returns reaches your repository untested. The orchestrator stops and publishes nothing if the issue, the approval or the default branch changes mid-run.</p>
+  <article class="project">
+    <h3>agent-orchestrator</h3>
+    <p class="what">From GitHub issue to draft pull request</p>
+    <p>Five GitHub Actions workflows in Python, and three human approvals: the spec merge, the <code>agent-ready</code> label and the PR merge. The GitHub App key and model keys stay in the orchestrator, which mints short-lived tokens per job. Each model key reaches only the one job that uses it.</p>
+    <p>Guard rails: only writers can trigger a run, and that is re-checked on every run. Each approval gets one run, with no automatic paid retries. Build files, workflows and config are always out of scope. The source is private. <a href="mailto:odwadevwork@gmail.com">Email me</a> for a walkthrough.</p>
+    <ul class="stack">
+      <li>Python</li><li>GitHub Actions</li><li>GitHub App tokens</li><li>Claude API</li><li>Gemini</li><li>Codex</li><li>Structured output</li>
+    </ul>
+  </article>
+</section>
+
 <section class="block" id="skills">
   <h2>What I work with</h2>
   <p class="intro">Grouped by the side of the system it belongs to.</p>
@@ -403,6 +491,10 @@
     <div class="side">
       <h3>Patterns</h3>
       <p>Event sourcing and CQRS, idempotency, distributed systems, OAuth2 and JWT, signed webhooks</p>
+    </div>
+    <div class="side">
+      <h3>Agentic AI</h3>
+      <p>Agent orchestration on GitHub Actions, agentic development with Claude Code, LLM features in the product: Gimba's natural-language segment builder</p>
     </div>
   </div>
 </section>
