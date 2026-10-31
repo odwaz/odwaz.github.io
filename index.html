@@ -327,12 +327,12 @@
     <div class="path" aria-label="The path of one event through Gimba">
       <p class="path-caption">One event through <strong>Gimba</strong>, my real-time customer data platform:</p>
       <ol class="hops">
-        <li class="hop" style="--i:0"><b>Client app</b><span>Any app sends what a customer did</span><code>HTTPS + API key</code></li>
+        <li class="hop" style="--i:0"><b>Client app</b><span>Any app sends what a customer did</span><code>HTTPS + ES256 token</code></li>
         <li class="hop" style="--i:1"><b>Ingest</b><span>Accepted once per tenant, even on retries</span><code>Spring WebFlux</code></li>
         <li class="hop" style="--i:2"><b>Event log</b><span>Append-only, replayable</span><code>Apache Kafka</code></li>
         <li class="hop" style="--i:3"><b>Profile</b><span>Identities stitched into one customer</span><code>R2DBC + Postgres JSONB</code></li>
         <li class="hop" style="--i:4"><b>Segments</b><span>Membership recomputed as events land</span><code>Rule engine</code></li>
-        <li class="hop" style="--i:5"><b>Callback</b><span>The app decides what happens: a nudge, an offer, a note for support</span><code>Ed25519-signed webhook</code></li>
+        <li class="hop" style="--i:5"><b>Callback</b><span>The app decides what happens: a nudge, an offer, a note for support</span><code>ES256-signed, encrypted webhook</code></li>
       </ol>
     </div>
   </div>
