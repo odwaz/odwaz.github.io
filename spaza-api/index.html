@@ -151,9 +151,9 @@
     <rect x="820" y="114" width="108" height="86" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
     <text x="874" y="136" text-anchor="middle" font-weight="600" font-size="11.5" fill="#f1f5fb">external CDP</text>
     <g font-size="10" fill="#9aa4b8" text-anchor="middle">
-      <text x="874" y="156">events out: HTTPS</text>
+      <text x="874" y="156">events out: ES256</text>
       <text x="874" y="170">callbacks in:</text>
-      <text x="874" y="184">Ed25519-signed</text>
+      <text x="874" y="184">ES256, encrypted</text>
     </g>
   </svg>
   <p class="diagram-foot">Dashed boxes belong to other organisations. Solid lines are synchronous HTTP; dotted lines are Kafka. Four services (catalog, order, payment, delivery) report customer activity to the CDP; its signed segment callbacks land on customer-service.</p>
@@ -374,7 +374,7 @@
   "orderStatus": "DELIVERED",
   "customerId": 12
 }</pre>
-    <p class="code-label" style="margin-top:16px"><b>to the CDP</b> · POST /v1/events (X-Api-Key)</p>
+    <p class="code-label" style="margin-top:16px"><b>to the CDP</b> · POST /v1/events · Bearer ES256 token; body sent encrypted as <code>{"data": …}</code>, shown decrypted</p>
 <pre class="code">{
   "event": "payment_completed",
   "customer": { "email": "…", "phone": "…" },

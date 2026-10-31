@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wallet Microservices | Odwa Matiwane</title>
-<meta name="description" content="A rand wallet as an API gateway and four reactive Spring Boot services: OTP sign-in, a double-entry ledger, a transactional outbox, idempotent money calls and Ed25519-verified callbacks, with the service map, sequence flows, failure handling, contracts and schema.">
+<meta name="description" content="A rand wallet as an API gateway and four reactive Spring Boot services: OTP sign-in, a double-entry ledger, a transactional outbox, idempotent money calls and ES256-signed, encrypted CDP messages, with the service map, sequence flows, failure handling, contracts and schema.">
 <meta property="og:image" content="https://odwaz.github.io/media/wallet-run.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316181b'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23d4b56a'%3EOM%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/assets/writeup.css?v=2">
@@ -52,7 +52,7 @@
 <div class="diagram-card">
   <p class="diagram-title">Services, ports and what connects them</p>
   <svg class="diagram-svg" viewBox="0 0 940 380" role="img"
-       aria-label="zaripay calls the api-gateway on port 8000, which routes to auth-service 8001, wallet-service 8002, transaction-service 8003 and webhook-service 8004. wallet-service writes its journal, wallets and an outbox row in one transaction; an outbox publisher drains events to transaction-service over HTTP. transaction-service sends events to an external customer data platform, which sends Ed25519-signed callbacks back to wallet-service through the gateway. An external payment rail sends deposit and withdrawal notifications to webhook-service, which applies them through wallet-service. Each service owns its tables in one PostgreSQL server.">
+       aria-label="zaripay calls the api-gateway on port 8000, which routes to auth-service 8001, wallet-service 8002, transaction-service 8003 and webhook-service 8004. wallet-service writes its journal, wallets and an outbox row in one transaction; an outbox publisher drains events to transaction-service over HTTP. transaction-service sends events to an external customer data platform, which sends ES256-signed, encrypted callbacks back to wallet-service through the gateway. An external payment rail sends deposit and withdrawal notifications to webhook-service, which applies them through wallet-service. Each service owns its tables in one PostgreSQL server.">
     <defs>
       <marker id="wA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
       <marker id="wX" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#9aa4b8"/></marker>
@@ -66,7 +66,7 @@
     <rect x="162" y="104" width="128" height="128" rx="10" fill="#7aa2ff" fill-opacity="0.08" stroke="#7aa2ff" stroke-opacity="0.6"/>
     <text x="226" y="126" text-anchor="middle" font-weight="600" font-size="13" fill="#7aa2ff">api-gateway</text>
     <text x="226" y="142" text-anchor="middle" font-size="10.5" fill="#9aa4b8">:8000</text>
-    <g font-size="10" fill="#9aa4b8" text-anchor="middle"><text x="226" y="164">verifies JWT</text><text x="226" y="178">X-User-* headers</text><text x="226" y="192">decoded-path match</text><text x="226" y="206">callbacks: no JWT,</text><text x="226" y="220">signature instead</text></g>
+    <g font-size="10" fill="#9aa4b8" text-anchor="middle"><text x="226" y="164">verifies JWT</text><text x="226" y="178">X-User-* headers</text><text x="226" y="192">decoded-path match</text><text x="226" y="206">callbacks: no user JWT,</text><text x="226" y="220">CDP token instead</text></g>
     <line x1="290" y1="168" x2="312" y2="168" stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#wA)"/>
     <!-- services frame -->
     <rect x="316" y="10" width="440" height="250" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-dasharray="3 4"/>
@@ -95,7 +95,7 @@
     <!-- external CDP -->
     <rect x="786" y="22" width="140" height="110" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
     <text x="856" y="44" text-anchor="middle" font-weight="600" font-size="11.5" fill="#f1f5fb">external CDP</text>
-    <g font-size="10" fill="#9aa4b8" text-anchor="middle"><text x="856" y="64">events in: POST /v1/events</text><text x="856" y="78">X-Event-Id, X-Api-Key</text><text x="856" y="98">callbacks out:</text><text x="856" y="112">Ed25519-signed</text></g>
+    <g font-size="10" fill="#9aa4b8" text-anchor="middle"><text x="856" y="64">events in: POST /v1/events</text><text x="856" y="78">ES256 token, encrypted</text><text x="856" y="98">callbacks out:</text><text x="856" y="112">ES256 token, encrypted</text></g>
     <line x1="744" y1="77" x2="782" y2="77" stroke="#9aa4b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#wX)"/>
     <!-- external rail -->
     <rect x="786" y="140" width="140" height="110" rx="8" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
@@ -198,7 +198,7 @@
 <div class="flow-card">
   <div class="flow-scroll">
   <svg class="flow-svg" viewBox="0 0 940 360" role="img"
-       aria-label="Sign-in: zaripay posts email and password to /oauth/login; auth-service checks the password and issues a one-time code valid for five minutes with five attempts; zaripay exchanges it at /oauth2/token with grant type otp for a JWT. CDP callback: the CDP posts to /api/v1/cdp/callbacks through the gateway without a user token; wallet-service verifies the Ed25519 signature over the raw body with the CDP's public key, claims the X-Delivery-Id so a redelivery is ignored, matches the profile to a wallet by email or phone, stores the result and replies.">
+       aria-label="Sign-in: zaripay posts email and password to /oauth/login; auth-service checks the password and issues a one-time code valid for five minutes with five attempts; zaripay exchanges it at /oauth2/token with grant type otp for a JWT. CDP callback: the CDP posts to /api/v1/cdp/callbacks through the gateway without a user token; wallet-service verifies the CDP's ES256 token with the CDP's public key, decrypts the body with its own key and checks the token's hash against it, claims the X-Delivery-Id so a redelivery is ignored, matches the profile to a wallet by email or phone, stores the result and replies.">
     <defs>
       <marker id="sA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
       <marker id="sG" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#4ade80"/></marker>
@@ -227,17 +227,17 @@
 
       <text x="496" y="220" fill="#9aa4b8">segment change (any time)</text>
       <line x1="490" y1="240" x2="696" y2="240" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#sA)"/>
-      <text x="496" y="233">4. POST /api/v1/cdp/callbacks</text><text x="496" y="255" fill="#9aa4b8">X-Signature, -Key-Id, -Delivery-Id</text>
+      <text x="496" y="233">4. POST /api/v1/cdp/callbacks</text><text x="496" y="255" fill="#9aa4b8">Bearer ES256, X-Delivery-Id</text>
       <line x1="700" y1="276" x2="866" y2="276" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#sA)"/>
       <text x="706" y="269">5. passed without a user JWT</text>
       <rect x="760" y="292" width="170" height="54" rx="6" fill="#4ade80" fill-opacity="0.1" stroke="#4ade80" stroke-opacity="0.5"/>
-      <text x="766" y="308">6. Ed25519 over raw body</text>
+      <text x="766" y="308">6. verify, decrypt, hash</text>
       <text x="766" y="323" fill="#9aa4b8">claim delivery id (dedupe)</text>
       <text x="766" y="338" fill="#9aa4b8">store result → 200</text>
     </g>
   </svg>
   </div>
-  <p class="diagram-foot">A callback with no delivery id, a bad signature or a malformed body is rejected before anything is stored. The CDP's public key is shared out of band, so only the CDP can produce a valid signature.</p>
+  <p class="diagram-foot">A callback with no delivery id, a token that doesn't verify, or a body that doesn't decrypt or match the token's hash is rejected before anything is stored. Public keys are shared out of band: only the CDP can sign the token, and only the wallet can decrypt the body.</p>
 </div>
 
 <h3 style="margin-top:36px">3. Failure and compensation</h3>
@@ -252,7 +252,7 @@
     <tr><td>Publisher dies mid-send</td><td>A claim older than 2 minutes is reclaimed and the row re-sent; transaction-service's unique <code>transactionId</code> turns the repeat into a no-op.</td></tr>
     <tr><td>CDP down or rate-limiting</td><td>The transaction stays <code>cdp_state = PENDING</code>; 5xx, 408 and 429 are retried (429 after its <code>Retry-After</code>) and a sweep re-sends pending rows every 60 s.</td></tr>
     <tr><td>CDP rejects the event (other 4xx)</td><td>Marked REJECTED and logged as a contract violation: retrying a bad request can't fix it.</td></tr>
-    <tr><td>Forged or replayed callback</td><td>Forged: signature fails, 401. Replayed: the delivery id is already claimed, so nothing changes.</td></tr>
+    <tr><td>Forged or replayed callback</td><td>Forged: the token fails to verify, 401. Replayed: the delivery id is already claimed, so nothing changes.</td></tr>
     <tr><td>Cached balance drifts from the ledger</td><td><code>GET /wallets/{id}/reconcile</code> reports both; balances are only ever written alongside a journal.</td></tr>
   </tbody>
 </table>
@@ -280,7 +280,7 @@
 }</pre>
   </div>
   <div>
-    <p class="code-label"><b>to the CDP</b> · POST /v1/events · X-Event-Id</p>
+    <p class="code-label"><b>to the CDP</b> · POST /v1/events · Bearer ES256 token; body sent encrypted as <code>{"data": …}</code>, shown decrypted</p>
 <pre class="code">{
   "eventId": "3c0a…",
   "event": "wallet.transaction.transfer",
@@ -294,9 +294,9 @@
   },
   "context": { "source": "wallet-api" }
 }</pre>
-    <p class="code-label" style="margin-top:16px"><b>from the CDP</b> · POST /api/v1/cdp/callbacks</p>
+    <p class="code-label" style="margin-top:16px"><b>from the CDP</b> · POST /api/v1/cdp/callbacks · body shown decrypted</p>
 <pre class="code">X-Delivery-Id: d-81f…   X-Event-Id: 3c0a…
-X-Signature: (Ed25519)  X-Signature-Key-Id: k1
+Authorization: Bearer (ES256, iss, aud, exp, hash)
 { "eventId": "3c0a…", "profileKey": "…",
   "customer": { "email": "…", "phone": "…" },
   "automation": { … }, "enrichment": { … },
@@ -322,7 +322,7 @@ X-Signature: (Ed25519)  X-Signature-Key-Id: k1
   <li>The gateway verifies the JWT, removes any <code>X-User-*</code> header the client sent and sets its own from the verified claims. Routes are matched on the decoded path, so an encoded or dotted path can't slip past a rule.</li>
   <li>Sign-in needs the password and then a one-time code (5 minutes, 5 attempts) before a token is issued.</li>
   <li>Money endpoints only act on the caller's own wallet: a transfer's source must belong to the caller, and idempotency keys are scoped to the caller so one user's key can't replay another's response.</li>
-  <li>CDP callbacks carry no user token; they're accepted only with a valid Ed25519 signature over the raw body.</li>
+  <li>CDP callbacks carry no user token; they're accepted only with the CDP's ES256 token, a body that decrypts with the wallet's key, and a hash in the token that matches that body. Answers go back the same way.</li>
 </ul>
 
 <h2>Tech stack</h2>
@@ -335,7 +335,7 @@ X-Signature: (Ed25519)  X-Signature-Key-Id: k1
 <div class="stack-group">
   <p class="stack-label">Security</p>
   <div class="chips">
-    <span class="chip">Spring Authorization Server</span><span class="chip">One-time codes</span><span class="chip">JWT</span><span class="chip">Ed25519 verification</span><span class="chip">Trivy</span>
+    <span class="chip">Spring Authorization Server</span><span class="chip">One-time codes</span><span class="chip">JWT</span><span class="chip">ES256 + JWE</span><span class="chip">Trivy</span>
   </div>
 </div>
 <div class="stack-group">

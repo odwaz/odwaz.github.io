@@ -349,7 +349,7 @@
       <h3>Gimba</h3>
       <p class="what">Real-time customer data platform</p>
       <p>Apps send events; Gimba stitches them into one profile per customer, keeps segments current, and calls the app back when someone enters or leaves a segment. Gimba decides <em>who</em>. The app decides <em>what happens</em>, and Gimba reports on the result.</p>
-      <p>Multi-tenant and fully reactive, with no blocking calls in the hot path. Profiles can be replayed from the append-only event log, and projections update off Kafka.</p>
+      <p>Multi-tenant and reactive end to end: each event goes from ingest through Kafka to profile and segment updates without tying up a thread. Profiles can be rebuilt by replaying the append-only event log.</p>
       <p class="links"><a class="readmore" href="https://odwaz.github.io/real-time-cdp/">Read the Gimba write-up</a></p>
       <ul class="stack">
         <li>Apache Kafka</li><li>Spring WebFlux</li><li>R2DBC</li><li>PostgreSQL JSONB</li><li>Event sourcing</li><li>CQRS</li><li>Resilience4j</li><li>Claude API</li><li>Property tests</li>
