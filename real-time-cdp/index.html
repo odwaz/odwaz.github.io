@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gimba — Real-time CDP | Odwa Matiwane</title>
+<meta name="description" content="A multi-tenant customer data platform on reactive Java: an HTTP ingestion contract, a four-stage Kafka pipeline, identity stitching, traits, time-windowed segments and ES256-signed, encrypted webhooks, with the design, sequence flows, failure handling, contracts and schema.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316181b'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23d4b56a'%3EOM%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/writeup.css?v=2">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="topbar">
+  <a class="back" href="https://odwaz.github.io/">&larr; Odwa Matiwane</a>
+  <span class="crumb">projects / <b>real-time-cdp</b></span>
+</nav>
+
+<header>
+  <p class="eyebrow">event<span class="sep">&rarr;</span>profile<span class="sep">&rarr;</span>segment<span class="sep">&rarr;</span>webhook</p>
+  <h1>Gimba — Real-time CDP</h1>
+  <p class="thesis">
+    A multi-tenant customer data platform on reactive Java. Any application posts events over a published HTTP
+    contract; Gimba runs them through a <strong>four-stage Kafka pipeline</strong> that stitches identities into one
+    profile per customer, computes traits, re-evaluates segments, and tells the application who entered or left a
+    segment in an <strong>ES256-signed, encrypted webhook</strong>. Nothing in the request path waits on the pipeline.
+  </p>
+  <div class="meta-row">
+    <span class="pill hot">Java 17 · Spring Boot 4</span>
+    <span class="pill hot">Spring WebFlux · R2DBC</span>
+    <span class="pill hot">Apache Kafka (KRaft)</span>
+    <span class="pill hot">PostgreSQL JSONB</span>
+    <span class="pill">Solo project: design to deploy</span>
+  </div>
+</header>
+
+<figure class="run">
+  <video controls playsinline preload="none" poster="/media/gimba-architecture.jpg" aria-label="Gimba architecture walkthrough, 2 minutes 32 seconds">
+    <source src="/media/gimba-architecture.mp4" type="video/mp4">
+    <a href="/media/gimba-architecture.mp4">Download the recording.</a>
+  </video>
+  <figcaption>Architecture walkthrough, 2:32: high-level design, event and failure flows, the event-to-segment and webhook sequence diagrams, contracts and tables. Admin screens are from a real run.</figcaption>
+</figure>
+
+<!-- ============================== HIGH-LEVEL DESIGN ============================== -->
+
+<h2>High-level design</h2>
+<p class="section-sub">One Spring Boot application split into Spring Modulith modules. The ingestion API stores and acknowledges; four Kafka stages do the rest, each keyed by profile so one customer's events stay in order.</p>
+
+<div class="diagram-card">
+  <p class="diagram-title">Ingestion, pipeline and delivery</p>
+  <svg class="diagram-svg" viewBox="0 0 940 420" role="img"
+       aria-label="Client applications post events to Gimba's ingestion API with an ES256-signed token and an encrypted body. Ingestion validates the contract and schema, stores the event in PostgreSQL and publishes it to the events.raw topic. The validator consumes it and publishes to validated-events keyed by profile. The profile engine resolves identity, applies traits and saves the profile, then publishes profile-updated. The automation engine and segment membership consume profile-updated and publish segment-changes. The webhook dispatcher consumes segment-changes and sends signed, encrypted webhooks back to the client applications, logging each response. Failed records go to dead-letter topics watched by a monitor. An admin UI and API read profiles, segments, webhook logs and analytics.">
+    <defs>
+      <marker id="gA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
+      <marker id="gK" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#fbbf24"/></marker>
+      <marker id="gX" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#9aa4b8"/></marker>
+    </defs>
+    <!-- apps -->
+    <rect x="16" y="40" width="124" height="120" rx="10" fill="none" stroke="#9aa4b8" stroke-opacity="0.8" stroke-dasharray="5 4"/>
+    <text x="78" y="64" text-anchor="middle" font-weight="600" font-size="12.5" fill="#f1f5fb">client apps × N</text>
+    <g font-size="10" fill="#9aa4b8" text-anchor="middle"><text x="78" y="84">any organisation</text><text x="78" y="100">ES256 token → tenant</text><text x="78" y="116">body encrypted</text><text x="78" y="136">receive webhooks,</text><text x="78" y="150">reply with outcome</text></g>
+    <line x1="140" y1="88" x2="166" y2="88" stroke="#7aa2ff" stroke-width="1.6" marker-end="url(#gA)"/>
+    <text x="153" y="80" text-anchor="middle" font-size="9" fill="#9aa4b8">POST</text>
+    <!-- ingestion -->
+    <rect x="170" y="40" width="150" height="120" rx="10" fill="#7aa2ff" fill-opacity="0.08" stroke="#7aa2ff" stroke-opacity="0.6"/>
+    <text x="245" y="62" text-anchor="middle" font-weight="600" font-size="12.5" fill="#7aa2ff">ingestion API</text>
+    <text x="245" y="77" text-anchor="middle" font-size="10" fill="#9aa4b8">POST /v1/events</text>
+    <g font-size="10" fill="#9aa4b8" text-anchor="middle"><text x="245" y="96">ES256 token · rate limit</text><text x="245" y="110">contract + JSON Schema</text><text x="245" y="124">store, then publish</text><text x="245" y="138">ack: accepted /</text><text x="245" y="152">duplicate_ignored</text></g>
+    <!-- pipeline row -->
+    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2">
+      <rect x="360" y="40" width="130" height="58" rx="8"/><rect x="530" y="40" width="130" height="58" rx="8"/>
+      <rect x="700" y="40" width="130" height="58" rx="8"/>
+      <rect x="700" y="130" width="130" height="58" rx="8"/><rect x="530" y="130" width="130" height="58" rx="8"/>
+    </g>
+    <g font-weight="600" font-size="11.5" fill="#f1f5fb" text-anchor="middle">
+      <text x="425" y="62">validator</text><text x="595" y="62">profile engine</text><text x="765" y="62">automation +</text>
+      <text x="765" y="152">webhook</text><text x="595" y="152">dead-letter</text>
+    </g>
+    <g font-size="9.5" fill="#9aa4b8" text-anchor="middle">
+      <text x="425" y="78">schema per event type</text><text x="425" y="90">event-validator-group</text>
+      <text x="595" y="78">identity · traits · profile</text><text x="595" y="90">event-engine-group</text>
+      <text x="765" y="76">segment membership</text><text x="765" y="90">enter / exit transitions</text>
+      <text x="765" y="166">dispatcher · ES256</text><text x="765" y="178">retries · delivery log</text>
+      <text x="595" y="166">monitor: dlq-* and *.DLT</text><text x="595" y="178">ERROR + metric</text>
+    </g>
+    <!-- topic arrows -->
+    <g stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="4 3">
+      <line x1="320" y1="69" x2="356" y2="69" marker-end="url(#gK)"/><line x1="490" y1="69" x2="526" y2="69" marker-end="url(#gK)"/>
+      <line x1="660" y1="69" x2="696" y2="69" marker-end="url(#gK)"/><line x1="765" y1="98" x2="765" y2="126" marker-end="url(#gK)"/>
+    </g>
+    <g font-size="9.5" fill="#fbbf24" text-anchor="middle" font-family="monospace">
+      <text x="338" y="30">events.raw</text><text x="508" y="30">validated-events</text><text x="678" y="30">profile-updated</text><text x="822" y="116">segment-changes</text>
+    </g>
+    <!-- webhook out -->
+    <path d="M765 188 L 765 202 L 60 202 L 60 166" fill="none" stroke="#9aa4b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#gX)"/>
+    <text x="420" y="214" text-anchor="middle" font-size="10" fill="#9aa4b8">signed webhook back to the app: who entered or left a segment, with their traits</text>
+
+    <!-- Postgres -->
+    <rect x="170" y="226" width="660" height="88" rx="10" fill="#38bdf8" fill-opacity="0.07" stroke="#38bdf8" stroke-opacity="0.55"/>
+    <text x="186" y="244" font-size="12.5" fill="#38bdf8" font-weight="600">PostgreSQL · R2DBC · Flyway</text>
+    <g font-size="10.5" fill="#9aa4b8">
+      <text x="186" y="264">events (append-only, unique per tenant + eventId) · profiles (JSONB traits, applied event ids)</text>
+      <text x="186" y="280">segments · segment_memberships · trait_computation_rules · automation_rules · webhook_logs</text>
+      <text x="186" y="296">tenants · apps · users · user_tenant_roles · event_schemas · consents · destinations</text>
+    </g>
+    <g stroke="#38bdf8" stroke-opacity="0.5" stroke-width="1.2" stroke-dasharray="2 3"><line x1="245" y1="160" x2="245" y2="198"/></g>
+
+    <!-- admin -->
+    <rect x="170" y="336" width="660" height="66" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.2"/>
+    <text x="186" y="358" font-size="12.5" fill="#f1f5fb" font-weight="600">admin API + admin UI</text>
+    <g font-size="10.5" fill="#9aa4b8"><text x="186" y="376">JWT · roles per tenant, re-read per request · profiles, segments, rules, webhook outcomes, analytics, CSV exports</text><text x="186" y="392">AI segment builder: Claude drafts a segment definition from plain English; it never queries data itself</text></g>
+  </svg>
+  <p class="diagram-foot">Dashed boxes are other organisations' systems. Solid lines are HTTP; dotted lines are Kafka topics, each with 6 partitions and keyed by profile. Every stage has a dead-letter path.</p>
+</div>
+
+<h3 style="margin-top:36px">Modules</h3>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>Module</th><th>Owns</th></tr></thead>
+  <tbody>
+    <tr><td>appregistry</td><td>app registration, each app's public signing keys, the token auth filter, rate limiting</td></tr>
+    <tr><td>ingestion</td><td><code>POST /v1/events</code>: contract checks, store-then-publish, acknowledgements</td></tr>
+    <tr><td>schema</td><td>JSON Schema per tenant and event type</td></tr>
+    <tr><td>consumer</td><td>the validator and profile-engine consumers, the dead-letter monitor</td></tr>
+    <tr><td>identity</td><td>resolving an event to a profile key: first of id, email, phone</td></tr>
+    <tr><td>traits</td><td>trait computation rules applied per event</td></tr>
+    <tr><td>profiles</td><td>profile entity, per-profile idempotency, replay from the event log</td></tr>
+    <tr><td>segments</td><td>rule AST, parser, validator, compiler to parameterised SQL, time windows, memberships</td></tr>
+    <tr><td>automation</td><td>automation rules and segment enter / exit transitions</td></tr>
+    <tr><td>webhook</td><td>dispatcher, callback sealer, target policy, delivery log</td></tr>
+    <tr><td>analytics · ai · consent · auth</td><td>reports and CSV, the AI segment builder, POPIA / GDPR consent, admin login and per-tenant roles</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 style="margin-top:36px">Kafka topics</h3>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>Topic</th><th>Producer</th><th>Consumer (group)</th><th>Key</th></tr></thead>
+  <tbody>
+    <tr><td><code>events.raw</code></td><td>ingestion</td><td>validator (<code>event-validator-group</code>)</td><td>profile key</td></tr>
+    <tr><td><code>validated-events</code></td><td>validator</td><td>profile engine (<code>event-engine-group</code>)</td><td>profile key</td></tr>
+    <tr><td><code>profile-updated</code></td><td>profile engine</td><td>automation (<code>automation-engine-group</code>), segment membership (<code>segment-membership-group</code>)</td><td>profile key</td></tr>
+    <tr><td><code>segment-changes</code></td><td>automation, segment membership</td><td>webhook dispatcher (<code>webhook-dispatcher-group</code>)</td><td>profile key</td></tr>
+    <tr><td><code>dlq-*</code>, <code>*.DLT</code></td><td>any stage that gives up</td><td>dead-letter monitor (<code>dead-letter-monitor</code>)</td><td>original</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============================== LOW-LEVEL DESIGN ============================== -->
+
+<h2>Low-level design</h2>
+
+<h3>1. Event to profile to segment</h3>
+<div class="flow-card">
+  <div class="flow-scroll">
+  <svg class="flow-svg" viewBox="0 0 940 500" role="img"
+       aria-label="An app posts an event with an ES256-signed token and an encrypted body. Ingestion verifies the token with the app's public key, which decides the tenant, decrypts the body, checks the token's hash matches it, validates the schema, stores the event and publishes it to events.raw, then acknowledges accepted. The validator republishes it to validated-events keyed by profile. The profile engine resolves the identity, skips the event if this profile already applied that event id, applies trait rules, saves the profile and publishes profile-updated. Segment membership re-evaluates the profile's segments and publishes an ENTERED or EXITED change to segment-changes.">
+    <defs>
+      <marker id="pA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
+      <marker id="pK" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#fbbf24"/></marker>
+      <marker id="pG" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#4ade80"/></marker>
+    </defs>
+    <!-- lanes: app 60, ingestion 200, postgres 340, kafka 480, validator 610, engine 740, segments 875 -->
+    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.25">
+      <rect x="18" y="10" width="84" height="34" rx="7" stroke-dasharray="4 3"/><rect x="158" y="10" width="84" height="34" rx="7"/>
+      <rect x="298" y="10" width="84" height="34" rx="7"/><rect x="438" y="10" width="84" height="34" rx="7"/>
+      <rect x="568" y="10" width="84" height="34" rx="7"/><rect x="698" y="10" width="84" height="34" rx="7"/>
+      <rect x="833" y="10" width="84" height="34" rx="7"/>
+    </g>
+    <g font-weight="600" font-size="11" fill="#f1f5fb" text-anchor="middle">
+      <text x="60" y="32">app</text><text x="200" y="32">ingestion</text><text x="340" y="32">PostgreSQL</text><text x="480" y="32" fill="#fbbf24">Kafka</text>
+      <text x="610" y="32">validator</text><text x="740" y="32">engine</text><text x="875" y="32">segments</text>
+    </g>
+    <g stroke="#ffffff" stroke-opacity="0.18" stroke-dasharray="3 4">
+      <line x1="60" y1="44" x2="60" y2="490"/><line x1="200" y1="44" x2="200" y2="490"/><line x1="340" y1="44" x2="340" y2="490"/>
+      <line x1="480" y1="44" x2="480" y2="490"/><line x1="610" y1="44" x2="610" y2="490"/><line x1="740" y1="44" x2="740" y2="490"/>
+      <line x1="875" y1="44" x2="875" y2="490"/>
+    </g>
+    <g font-size="10.5" fill="#f1f5fb">
+      <line x1="60" y1="78" x2="196" y2="78" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#pA)"/>
+      <text x="66" y="71">1. POST /v1/events</text><text x="66" y="93" fill="#9aa4b8">Bearer ES256 · JWE</text>
+      <rect x="180" y="104" width="300" height="58" rx="6" fill="#7aa2ff" fill-opacity="0.1" stroke="#7aa2ff" stroke-opacity="0.5"/>
+      <text x="190" y="122">2. key → tenant; header id = body id;</text>
+      <text x="190" y="138">identity present; JSON Schema for the type</text>
+      <text x="190" y="154" fill="#9aa4b8">401 / 400 / 403 tenant conflict, nothing stored</text>
+      <line x1="200" y1="186" x2="336" y2="186" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#pA)"/>
+      <text x="206" y="179">3. insert event</text><text x="206" y="201" fill="#9aa4b8">unique (tenant, eventId)</text>
+      <line x1="200" y1="226" x2="476" y2="226" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#pK)"/>
+      <text x="206" y="219" dx="140">4. publish events.raw</text><text x="346" y="241" fill="#9aa4b8">then mark published_at</text>
+      <line x1="200" y1="262" x2="64" y2="262" stroke="#4ade80" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#pG)"/>
+      <text x="70" y="255">5. 200 · accepted</text>
+      <line x1="480" y1="296" x2="606" y2="296" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#pK)"/>
+      <text x="486" y="289">6. validate → validated-events</text>
+      <line x1="610" y1="330" x2="736" y2="330" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#pK)"/>
+      <text x="616" y="323">7. key = profile</text>
+      <rect x="640" y="342" width="200" height="74" rx="6" fill="#7aa2ff" fill-opacity="0.1" stroke="#7aa2ff" stroke-opacity="0.5"/>
+      <text x="650" y="360">8. resolve identity</text>
+      <text x="650" y="376" fill="#9aa4b8">already applied this id? skip</text>
+      <text x="650" y="392" fill="#9aa4b8">apply trait rules, save</text>
+      <text x="650" y="408" fill="#9aa4b8">profile (JSONB traits)</text>
+      <line x1="740" y1="442" x2="871" y2="442" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#pK)"/>
+      <text x="746" y="435">9. profile-updated</text>
+      <text x="924" y="462" text-anchor="end" fill="#9aa4b8">10. re-evaluate segments:</text>
+      <text x="924" y="478" text-anchor="end" fill="#9aa4b8">ENTERED / EXITED → segment-changes</text>
+    </g>
+  </svg>
+  </div>
+  <p class="diagram-foot">The event is stored before it is published. If the publish fails the client is told to retry with the same <code>eventId</code>; that retry publishes the stored event instead of storing a second copy, and a retry of an event already published is acknowledged as <code>duplicate_ignored</code>.</p>
+</div>
+
+<h3 style="margin-top:36px">2. Webhook delivery</h3>
+<div class="flow-card">
+  <div class="flow-scroll">
+  <svg class="flow-svg" viewBox="0 0 940 300" role="img"
+       aria-label="The webhook dispatcher consumes a segment change, checks the target URL against the target policy, encrypts the body to the app's key, signs a token over it with Gimba's ES256 key and posts it to the app with that token, X-Delivery-Id and X-Event-Id. On 2xx it stores the app's reply as the outcome. On 5xx, 408 or 429 it retries, up to four attempts in all; any other 4xx is permanent. Every attempt is written to webhook_logs.">
+    <defs>
+      <marker id="hhA" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#7aa2ff"/></marker>
+      <marker id="hhG" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#4ade80"/></marker>
+      <marker id="hhK" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#fbbf24"/></marker>
+    </defs>
+    <g fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.25">
+      <rect x="48" y="10" width="104" height="34" rx="7"/><rect x="318" y="10" width="104" height="34" rx="7"/>
+      <rect x="588" y="10" width="104" height="34" rx="7"/><rect x="788" y="10" width="104" height="34" rx="7" stroke-dasharray="4 3"/>
+    </g>
+    <g font-weight="600" font-size="11.5" fill="#f1f5fb" text-anchor="middle">
+      <text x="100" y="32" fill="#fbbf24">segment-changes</text><text x="370" y="32">dispatcher</text><text x="640" y="32">webhook_logs</text><text x="840" y="32">app</text>
+    </g>
+    <g stroke="#ffffff" stroke-opacity="0.18" stroke-dasharray="3 4">
+      <line x1="100" y1="44" x2="100" y2="290"/><line x1="370" y1="44" x2="370" y2="290"/><line x1="640" y1="44" x2="640" y2="290"/><line x1="840" y1="44" x2="840" y2="290"/>
+    </g>
+    <g font-size="10.5" fill="#f1f5fb">
+      <line x1="100" y1="76" x2="366" y2="76" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#hhK)"/>
+      <text x="106" y="69">1. ENTERED / EXITED + traits</text>
+      <rect x="350" y="92" width="270" height="44" rx="6" fill="#7aa2ff" fill-opacity="0.1" stroke="#7aa2ff" stroke-opacity="0.5"/>
+      <text x="360" y="110">2. target policy: no private / cluster hosts</text>
+      <text x="360" y="126" fill="#9aa4b8">unless allow-listed · encrypt, sign (ES256)</text>
+      <line x1="370" y1="162" x2="836" y2="162" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#hhA)"/>
+      <text x="376" y="155">3. POST · Authorization: Bearer (ES256) · X-Delivery-Id · X-Event-Id</text>
+      <line x1="840" y1="196" x2="374" y2="196" stroke="#4ade80" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#hhG)"/>
+      <text x="836" y="189" text-anchor="end">4. 2xx + what the app did: { "action": … }</text>
+      <line x1="370" y1="232" x2="636" y2="232" stroke="#7aa2ff" stroke-width="1.5" marker-end="url(#hhA)"/>
+      <text x="376" y="225">5. log attempt, status, response body</text>
+      <text x="376" y="256" fill="#9aa4b8">5xx · 408 · 429 → retry, 4 attempts in all · other 4xx → permanent</text>
+      <text x="376" y="272" fill="#9aa4b8">a time-window lapse also produces EXITED, so memberships expire on time</text>
+    </g>
+  </svg>
+  </div>
+  <p class="diagram-foot">The app verifies the token with Gimba's public key, shared out of band, decrypts the body with its own key, checks the token's hash against it, and de-duplicates on <code>X-Delivery-Id</code>, which is stable across retries. Its reply is stored as the outcome, so analytics can show what each segment change led to.</p>
+</div>
+
+<h3 style="margin-top:36px">3. Failure and compensation</h3>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>When</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td>Client retries an event</td><td>Same <code>eventId</code>: acknowledged <code>duplicate_ignored</code>, or published now if the first publish never happened. Header and body ids that differ are rejected.</td></tr>
+    <tr><td>Wrong key, bad schema, no identity</td><td>401 / 400 before anything is stored. A key used against another tenant's data is a 403 tenant conflict.</td></tr>
+    <tr><td>Kafka redelivers to the profile engine</td><td>The profile keeps the ids of the events it has applied (the last 100), so a redelivered or out-of-order event is applied exactly once.</td></tr>
+    <tr><td>A stage keeps failing on a record</td><td>The error handler retries, then publishes it to a dead-letter topic; the monitor logs an ERROR and counts it on <code>gimba.dead_letters</code>.</td></tr>
+    <tr><td>App unreachable or overloaded</td><td>5xx, 408 and 429 are retried, up to four attempts; every attempt and response is in <code>webhook_logs</code>.</td></tr>
+    <tr><td>App rejects the webhook (other 4xx)</td><td>Treated as permanent: retrying the same request can't fix it.</td></tr>
+    <tr><td>Webhook pointed at an internal address</td><td>Refused by the target policy unless the host is explicitly allow-listed.</td></tr>
+    <tr><td>A profile needs rebuilding</td><td>Profiles are a projection of the append-only event log and can be replayed from it.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 style="margin-top:36px">4. Contracts</h3>
+<div class="code-pair">
+  <div>
+    <p class="code-label"><b>in</b> · POST /v1/events · Bearer ES256 token; body sent as <code>{"data": …}</code>, shown decrypted</p>
+<pre class="code">{
+  "eventId": "order-27-paid",
+  "event": "payment_completed",
+  "customer": { "email": "…", "phone": "…" },
+  "properties": {
+    "orderId": 27, "amount": 750.00,
+    "paymentMethod": "wallet"
+  }
+}</pre>
+    <p class="code-label" style="margin-top:16px"><b>ack</b> · 200</p>
+<pre class="code">{ "status": "accepted",
+  "eventId": "order-27-paid",
+  "profileKey": "tenant-a:email:…",
+  "gimbaEventId": 4812 }</pre>
+  </div>
+  <div>
+    <p class="code-label"><b>out</b> · webhook to the app, body shown decrypted</p>
+<pre class="code">X-Delivery-Id: …   X-Event-Id: …
+Authorization: Bearer (ES256, iss, aud, exp, hash)
+{
+  "eventId": "…",
+  "profileKey": "tenant-a:email:…",
+  "customer": { "id": …, "email": "…", "phone": "…" },
+  "automation": {
+    "segments": [ { "id": "frequent_buyer",
+                    "name": "Frequent buyer",
+                    "action": "ENTERED" } ],
+    "rulesFired": [ { "ruleId": …, "name": "…",
+                      "actionType": "WEBHOOK" } ]
+  },
+  "enrichment": {
+    "traits": { … },
+    "totals": { "totalSpend": …, "totalOrders": …,
+                "avgOrderValue": …, "totalEvents": … }
+  }
+}</pre>
+  </div>
+</div>
+<p class="section-sub" style="margin-top:12px">The tenant comes from the app whose key signed the token, never from the body. The token holds only who sent it, to whom, until when, and a hash of the message's contract fields, so it shows nothing about the event. The webhook carries the profile's traits, so the app can act without calling back.</p>
+
+<h3 style="margin-top:36px">5. Tables</h3>
+<p class="section-sub">Flyway migrations V1–V10; baselined automatically on an existing database.</p>
+<div class="spec-scroll">
+<table class="spec">
+  <thead><tr><th>Area</th><th>Tables</th><th>Key columns</th></tr></thead>
+  <tbody>
+    <tr><td>events</td><td><code>events</code>, <code>event_schemas</code></td><td>events: id, tenant_id, correlation_id (the client's eventId, unique per tenant), event_name, profile_key, app_id, payload (JSONB), published_at, created_at</td></tr>
+    <tr><td>profiles</td><td><code>profiles</code></td><td>profile_key, tenant_id, email, phone, customer_id, traits (JSONB), total_spend, total_orders, avg_order_value, applied_event_ids, version</td></tr>
+    <tr><td>segments</td><td><code>segments</code>, <code>segment_memberships</code>, <code>trait_computation_rules</code></td><td>segments: code, name, definition (rule AST, including time windows), membership_synced_at<br>segment_memberships: segment_id, profile_key, is_member, evaluated_at</td></tr>
+    <tr><td>automation</td><td><code>automation_rules</code>, <code>webhook_logs</code>, <code>destinations</code></td><td>webhook_logs: delivery_id, target_url, attempt_number, status, response_code, duration_ms, error_details, response_body, correlation_id</td></tr>
+    <tr><td>tenancy</td><td><code>tenants</code>, <code>apps</code>, <code>users</code>, <code>user_tenant_roles</code>, <code>app_signing_keys</code>, <code>consents</code></td><td>apps: app_id, tenant_id, issuer, status, rate_limit_rps<br>app_signing_keys: app_id, kid, public_jwk (P-256)<br>user_tenant_roles: user, tenant, role</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Security</h2>
+<ul class="points">
+  <li>Apps sign every request with their own P-256 key (ES256) and encrypt the body to Gimba's; Gimba stores only their public keys. The signing app decides the tenant, so a payload can't write into another tenant.</li>
+  <li>Admin users log in with a JWT; their roles are per tenant and re-read on each request (cached 30 s), so removing a role takes effect without waiting for the token to expire.</li>
+  <li>Admin routes are matched on the decoded path, so encoded or dotted paths can't skip a rule.</li>
+  <li>Segment rules compile to parameterised SQL from a parsed AST: no expression evaluation and no string-built queries.</li>
+  <li>Webhooks and responses are signed with Gimba's own ES256 key and encrypted to the app's; webhooks to internal targets are refused unless allow-listed.</li>
+</ul>
+
+<h2>Tech stack</h2>
+<div class="stack-group">
+  <p class="stack-label">Core</p>
+  <div class="chips">
+    <span class="chip">Java 17</span><span class="chip">Spring Boot 4</span><span class="chip">Spring WebFlux</span><span class="chip">R2DBC</span><span class="chip">Spring Modulith</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Data &amp; messaging</p>
+  <div class="chips">
+    <span class="chip">PostgreSQL JSONB + GIN</span><span class="chip">Flyway</span><span class="chip">Apache Kafka (KRaft)</span><span class="chip">4 topics + dead letters</span><span class="chip">Caffeine</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Reliability &amp; security</p>
+  <div class="chips">
+    <span class="chip">Resilience4j</span><span class="chip">ES256 tokens</span><span class="chip">JWT / OAuth2 resource server</span><span class="chip">JSON Schema</span><span class="chip">JWE (ECDH-ES)</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Admin &amp; AI</p>
+  <div class="chips">
+    <span class="chip">React 19</span><span class="chip">analytics + CSV</span><span class="chip">Claude API (segment drafts)</span>
+  </div>
+</div>
+<div class="stack-group">
+  <p class="stack-label">Quality &amp; delivery</p>
+  <div class="chips">
+    <span class="chip">JUnit 5</span><span class="chip">jqwik property tests</span><span class="chip">JaCoCo 80% gate</span><span class="chip">SonarCloud</span><span class="chip">GitLab CI</span><span class="chip">Docker</span><span class="chip">Kubernetes</span>
+  </div>
+</div>
+
+<h2>How it ships</h2>
+<p class="section-sub">Every push runs the full build on GitLab CI; a SonarCloud gate guards the merge, then it's packaged and rolled out with Kubernetes manifests.</p>
+<div class="pipeline-scroll">
+  <div class="pipeline">
+    <div class="stage"><span class="s-name">build</span><span class="s-meta">mvn compile</span></div>
+    <div class="stage"><span class="s-name">test</span><span class="s-meta">JUnit 5 + jqwik</span></div>
+    <div class="stage quality"><span class="s-name">quality</span><span class="s-meta">SonarCloud gate</span></div>
+    <div class="stage"><span class="s-name">package</span><span class="s-meta">jar / image</span></div>
+    <div class="stage deploy"><span class="s-name">deploy</span><span class="s-meta">Kubernetes manifests</span></div>
+  </div>
+</div>
+
+<footer>
+  <span>Gimba CDP, designed and built by <a href="https://odwaz.github.io/">Odwa Matiwane</a></span>
+  <span>Source available on request: <a href="mailto:odwadevwork@gmail.com">odwadevwork@gmail.com</a></span>
+</footer>
+
+</div>
+</body>
+</html>
