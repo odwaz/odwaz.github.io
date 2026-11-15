@@ -156,17 +156,16 @@
 </div>
 
 <h2>The common thread &mdash; IaC on AWS</h2>
-<p class="section-sub">Whatever the runtime, the AWS footprint under each service is defined in Terraform, with state kept remote, encrypted, and locked so an <code class="mono">apply</code> is safe to run from anywhere.</p>
+<p class="section-sub">Whatever the runtime, the AWS footprint under each service is defined in Terraform, with state kept in Terraform Cloud: one workspace per stack, stored remotely and locked while a run is in progress.</p>
 
-<p class="code-label"><b>backend.tf</b> &mdash; remote state on S3 with DynamoDB locking</p>
-<pre class="tf"><span class="c"># Remote state — S3 backend, DynamoDB locking, per-environment key.</span>
+<p class="code-label"><b>versions.tf</b> &mdash; remote state in Terraform Cloud, one workspace per stack</p>
+<pre class="tf"><span class="c"># Each stack has its own Terraform Cloud workspace, so its state is separate from every other stack.</span>
 terraform {
-  backend <span class="s">"s3"</span> {
-    bucket         = <span class="s">"gimba-terraform-state"</span>
-    key            = <span class="s">"environments/dev/terraform.tfstate"</span>
-    region         = <span class="s">"af-south-1"</span>
-    dynamodb_table = <span class="s">"gimba-terraform-locks"</span>
-    encrypt        = <span class="k">true</span>
+  cloud {
+    organization = <span class="s">"devwork"</span>
+    workspaces {
+      name = <span class="s">"wallet-dev"</span>
+    }
   }
 }</pre>
 
@@ -195,7 +194,7 @@ terraform {
 <div class="stack-group">
   <p class="stack-label">Infrastructure as code</p>
   <div class="chips">
-    <span class="chip">Terraform &ge; 1.5</span><span class="chip">HCL modules</span><span class="chip">S3 remote state</span><span class="chip">DynamoDB locking</span>
+    <span class="chip">Terraform &ge; 1.5</span><span class="chip">HCL modules</span><span class="chip">Terraform Cloud remote state</span><span class="chip">One workspace per stack</span>
   </div>
 </div>
 
