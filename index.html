@@ -297,6 +297,44 @@
   .stage.gate { border-color: var(--brass); }
   .stage.ship { border-color: var(--viridian); background: color-mix(in srgb, var(--viridian) 8%, var(--surface)); }
 
+  /* The platform underneath: the Terraform repo behind every deployment */
+  .platform-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 28px 28px 24px; margin-top: 28px;
+  }
+  .platform-card h3 { font-size: 1.35rem; margin-bottom: 6px; }
+  .platform-card > p { margin: 0 0 20px; max-width: 70ch; }
+  .points { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; margin: 0; }
+  .points div { padding: 14px 0; border-top: 1px solid var(--line); }
+  .points dt { font-family: var(--display); font-weight: 700; margin-bottom: 2px; }
+  .points dd { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  @media (max-width: 760px) { .points { grid-template-columns: 1fr; } }
+
+  /* Where I fit: one column per role */
+  .roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .role-card {
+    background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--brass);
+    border-radius: 14px; padding: 24px;
+  }
+  .role-card h3 { font-size: 1.25rem; margin-bottom: 10px; }
+  .role-card p { margin: 0 0 14px; font-size: 0.97rem; }
+  .role-card ul { list-style: none; margin: 0; padding: 0; color: var(--muted); font-size: 0.93rem; }
+  .role-card li { padding: 7px 0; border-top: 1px solid var(--line); }
+  @media (max-width: 860px) { .roles { grid-template-columns: 1fr; } }
+
+  /* Experience: oldest at the bottom */
+  .jobs { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); }
+  .jobs li {
+    display: grid; grid-template-columns: 9.5rem minmax(0, 17rem) minmax(0, 1fr); gap: 4px 28px;
+    padding: 20px 0; border-bottom: 1px solid var(--line);
+  }
+  .jobs .when { font-family: var(--mono); font-size: 0.82rem; color: var(--brass); padding-top: 3px; }
+  .jobs h3 { font-size: 1.1rem; line-height: 1.3; }
+  .jobs h3 span { display: block; font-family: var(--body); font-weight: 400; font-size: 0.95rem; color: var(--muted); letter-spacing: 0; }
+  .jobs p { margin: 0; font-size: 0.97rem; }
+  .cert { margin: 20px 0 0; color: var(--muted); }
+  @media (max-width: 760px) { .jobs li { grid-template-columns: 1fr; } }
+
   .also { max-width: 66ch; }
 
   footer {
@@ -441,6 +479,21 @@
       </ol>
     </div>
   </div>
+
+  <article class="platform-card">
+    <h3>The platform underneath</h3>
+    <p>One Terraform repository provisions the AWS side of these systems. It is built from small modules that each project picks up at a fixed version, so a change to one project cannot disturb another.</p>
+    <dl class="points">
+      <div><dt>Reusable modules</dt><dd>Networking, EKS, RDS, ECR, DNS, Kafka, monitoring and pipelines. One wrapper module assembles a complete stack for an application.</dd></div>
+      <div><dt>One stack per project and environment</dt><dd>Wallet (dev) and Convoy (staging) each have their own Terraform Cloud workspace and their own state.</dd></div>
+      <div><dt>Least-privilege access</dt><dd>Each workspace gets a role that can build and destroy only its own stack. Admin policies, access keys and account settings are always denied.</dd></div>
+      <div><dt>No stored cloud keys in CI</dt><dd>Pipelines push images through a short-lived GitHub OIDC role instead of long-lived credentials.</dd></div>
+    </dl>
+    <ul class="stack">
+      <li>Terraform</li><li>Terraform Cloud</li><li>Amazon EKS</li><li>RDS PostgreSQL</li><li>ECR</li><li>VPC networking</li><li>IAM + OIDC</li><li>Route 53</li>
+    </ul>
+    <p class="links" style="margin-top:18px"><a class="readmore" href="https://odwaz.github.io/platform/">Read the cloud deployments write-up</a></p>
+  </article>
 </section>
 
 <section class="block" id="agents">
@@ -497,6 +550,71 @@
       <p>Agent orchestration on GitHub Actions, agentic development with Claude Code, LLM features in the product: Gimba's natural-language segment builder</p>
     </div>
   </div>
+</section>
+
+<section class="block" id="roles">
+  <h2>Where I fit</h2>
+  <p class="intro">Three roles I can step into, each backed by work I have already done on payment systems.</p>
+  <div class="roles">
+    <article class="role-card">
+      <h3>Application support</h3>
+      <p>More than ten years of production support on payment systems. I trace a failed transaction through the logs and message payloads, find the cause, and either fix it or give the developers a clear report.</p>
+      <ul>
+        <li>Incidents and root-cause analysis</li>
+        <li>Releases and change control through CAB</li>
+        <li>Monitoring in Grafana, Datadog and Sentry</li>
+        <li>SQL on PostgreSQL, MySQL and Oracle</li>
+      </ul>
+    </article>
+    <article class="role-card">
+      <h3>Backend development</h3>
+      <p>Java and Spring services with tests around them. At iVeri I worked on new merchant integrations, guiding their developers through the gateway API and writing sample code where they needed it.</p>
+      <ul>
+        <li>Java 17 and 21, Spring Boot, WebFlux</li>
+        <li>REST APIs, OAuth2 and JWT</li>
+        <li>Apache Kafka</li>
+        <li>AI-assisted development with automated tests and quality gates</li>
+      </ul>
+    </article>
+    <article class="role-card">
+      <h3>Cloud and DevOps</h3>
+      <p>I installed and configured applications on remote Linux and Windows servers before cloud was the norm. I do the same job today with Terraform, Kubernetes and pipelines.</p>
+      <ul>
+        <li>Terraform on AWS (HashiCorp certified)</li>
+        <li>Kubernetes on Amazon EKS</li>
+        <li>GitLab CI/CD, GitHub Actions, ArgoCD</li>
+        <li>Docker</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section class="block" id="experience">
+  <h2>Experience</h2>
+  <p class="intro">The operating side of payments: gateways, card and bank integrations, releases and incidents.</p>
+  <ol class="jobs">
+    <li>
+      <span class="when">2022 to now</span>
+      <h3>Application Specialist <span>PayInc</span></h3>
+      <p>Configure and support core payment applications for South African financial institutions. Log change requests for routine work and bug fixes, present them to CAB, schedule testing with the test and downstream teams, and deploy. Monitoring and log tracing in Grafana; Kafka messaging.</p>
+    </li>
+    <li>
+      <span class="when">2021 to 2022</span>
+      <h3>Technical Support Engineer <span>Ozow</span></h3>
+      <p>Owned merchant API integrations and transaction queries. Application monitoring and alerting in Datadog.</p>
+    </li>
+    <li>
+      <span class="when">2015 to 2021</span>
+      <h3>Technical Support Specialist <span>iVeri Payment Technologies</span></h3>
+      <p>Second-line support for e-commerce and point-of-sale gateways. Worked on new merchant integrations: guided their developers through the gateway API and 3-D Secure, and supplied sample code where needed. Installed and configured applications on remote Linux and Windows servers. Error tracking in Sentry.</p>
+    </li>
+    <li>
+      <span class="when">2012 to 2015</span>
+      <h3>Application Support Engineer <span>EAI Solutions, for MTN</span></h3>
+      <p>Kept order processing running on Oracle and WebLogic, and managed deployments and rollbacks.</p>
+    </li>
+  </ol>
+  <p class="cert">HashiCorp Certified: Terraform Associate.</p>
 </section>
 
 <section class="block">
