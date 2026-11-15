@@ -486,15 +486,15 @@
 
   <article class="platform-card">
     <h3>The platform underneath</h3>
-    <p>One Terraform repository provisions the AWS side of these systems. It is built from small modules that each project picks up at a fixed version, so a change to one project cannot disturb another.</p>
+    <p>One Terraform repository defines the AWS side of the wallet and of a test application. It is built from small modules, and each project pins them to a fixed version, so a change to a module reaches a project only when that project moves to the new version.</p>
     <dl class="points">
-      <div><dt>Reusable modules</dt><dd>Networking, EKS, RDS, ECR, DNS, Kafka, monitoring and pipelines. One wrapper module assembles a complete stack for an application.</dd></div>
-      <div><dt>One stack per project and environment</dt><dd>Each project and environment has its own Terraform Cloud workspace and its own state.</dd></div>
-      <div><dt>Least-privilege access</dt><dd>Each workspace gets a role that can build and destroy only its own stack. Admin policies, access keys and account settings are always denied.</dd></div>
-      <div><dt>No stored cloud keys in CI</dt><dd>Pipelines push images through a short-lived GitHub OIDC role instead of long-lived credentials.</dd></div>
+      <div><dt>Modules in use</dt><dd>Networking, EKS, RDS, ECR and a GitHub OIDC role. A wrapper module combines them into one stack for an application.</dd></div>
+      <div><dt>Separate state per stack</dt><dd>Two stacks so far, each with its own Terraform Cloud workspace and state.</dd></div>
+      <div><dt>Narrower permissions on the newer stack</dt><dd>The newer stack's role can change only resources named after its workspace, and admin policies, access keys and account settings are denied. The older wallet stack still uses a broad administrator role.</dd></div>
+      <div><dt>Short-lived credentials for image pushes</dt><dd>Terraform defines a role that GitHub Actions on the wallet repository's main branch can assume to push images to ECR, with no stored AWS keys.</dd></div>
     </dl>
     <ul class="stack">
-      <li>Terraform</li><li>Terraform Cloud</li><li>Amazon EKS</li><li>RDS PostgreSQL</li><li>ECR</li><li>VPC networking</li><li>IAM + OIDC</li><li>Route 53</li>
+      <li>Terraform</li><li>Terraform Cloud</li><li>Amazon EKS</li><li>RDS PostgreSQL</li><li>ECR</li><li>VPC networking</li><li>IAM + OIDC</li>
     </ul>
     <p class="links" style="margin-top:18px"><a class="readmore" href="https://odwaz.github.io/platform/">Read the cloud deployments write-up</a></p>
   </article>
@@ -603,12 +603,12 @@
         <li>Java 17 and 21, Spring Boot, WebFlux</li>
         <li>REST APIs, OAuth2 and JWT</li>
         <li>Apache Kafka</li>
-        <li>AI-assisted development with automated tests and quality gates</li>
+        <li>Code written with AI coding assistants, checked by automated tests and SonarCloud</li>
       </ul>
     </article>
     <article class="role-card">
       <h3>Cloud and DevOps</h3>
-      <p>I installed and configured applications on remote Linux and Windows servers before cloud was the norm. I do the same job today with Terraform, Kubernetes and pipelines.</p>
+      <p>I installed and configured applications on remote Linux and Windows servers before cloud was the norm. Today I define infrastructure in Terraform and deploy to Kubernetes through pipelines.</p>
       <ul>
         <li>Terraform on AWS (HashiCorp certified)</li>
         <li>Kubernetes on Amazon EKS</li>
