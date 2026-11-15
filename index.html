@@ -485,7 +485,7 @@
     <p>One Terraform repository provisions the AWS side of these systems. It is built from small modules that each project picks up at a fixed version, so a change to one project cannot disturb another.</p>
     <dl class="points">
       <div><dt>Reusable modules</dt><dd>Networking, EKS, RDS, ECR, DNS, Kafka, monitoring and pipelines. One wrapper module assembles a complete stack for an application.</dd></div>
-      <div><dt>One stack per project and environment</dt><dd>Wallet (dev) and Convoy (staging) each have their own Terraform Cloud workspace and their own state.</dd></div>
+      <div><dt>One stack per project and environment</dt><dd>Each project and environment has its own Terraform Cloud workspace and its own state.</dd></div>
       <div><dt>Least-privilege access</dt><dd>Each workspace gets a role that can build and destroy only its own stack. Admin policies, access keys and account settings are always denied.</dd></div>
       <div><dt>No stored cloud keys in CI</dt><dd>Pipelines push images through a short-lived GitHub OIDC role instead of long-lived credentials.</dd></div>
     </dl>
@@ -525,6 +525,16 @@
     <p>Guard rails: only writers can trigger a run, and that is re-checked on every run. Each approval gets one run, with no automatic paid retries. Build files, workflows and config are always out of scope. The source is private. <a href="mailto:odwadevwork@gmail.com">Email me</a> for a walkthrough.</p>
     <ul class="stack">
       <li>Python</li><li>GitHub Actions</li><li>GitHub App tokens</li><li>Claude API</li><li>Gemini</li><li>Codex</li><li>Structured output</li>
+    </ul>
+  </article>
+  <article class="project" style="margin-top:20px">
+    <h3>From merge to running</h3>
+    <p class="what">The deploy stage</p>
+    <p>A sixth workflow takes over once a pull request is merged. It finds the images that changed and opens a release pull request in a separate deployments repository, which holds what should be running as Kubernetes manifests. Argo CD watches that repository, so merging the release is the deployment and reverting it is the rollback.</p>
+    <p>After a release the orchestrator runs smoke checks and rolls back if they fail, tells the original issues that their change has shipped, and promotes what passed to the next environment. The whole path has been run end to end on a test application of six services, from written specs through to released versions.</p>
+    <p>Jobs that run the target's code or the agent's code never see the GitHub App key. Dependencies are installed in a job with no secrets, and nothing such a job hands on is trusted without being checked.</p>
+    <ul class="stack">
+      <li>Argo CD</li><li>GitOps</li><li>Kustomize</li><li>Release pull requests</li><li>Smoke checks</li><li>Rollback</li><li>Promotion</li>
     </ul>
   </article>
 </section>
