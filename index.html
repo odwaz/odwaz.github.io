@@ -357,7 +357,7 @@
     <p class="pitch">
       Cloud-native backend systems in Java and Spring Boot: <strong>a real-time customer data platform on Kafka</strong>,
       <strong>a double-entry wallet</strong>, and <strong>ordering and delivery for spaza shops</strong>.
-      Each one ships with its own Terraform, Kubernetes manifests and CI/CD pipeline, and deploys to AWS.
+      Each has its own CI pipeline and Kubernetes manifests, and the wallet and SpazaAPi deploy to AWS on infrastructure defined in Terraform.
       Alongside them, <strong>an agent orchestrator</strong> that turns a labelled GitHub issue into a reviewed spec and a tested draft pull request.
     </p>
     <div class="actions">
@@ -410,7 +410,7 @@
     <article class="project">
       <h3>Wallet Microservices</h3>
       <p class="what">Distributed digital wallet</p>
-      <p>A rand wallet as an API gateway and four reactive Spring Boot services. Every money movement is a balanced journal in a double-entry ledger, events leave through a transactional outbox, and money calls are idempotent. Shipped with ArgoCD GitOps onto Terraform-provisioned AWS.</p>
+      <p>A rand wallet as an API gateway and four reactive Spring Boot services. Every money movement is a balanced journal in a double-entry ledger, events leave through a transactional outbox, and money calls are idempotent. Ships with Argo CD GitOps onto AWS infrastructure defined in Terraform.</p>
       <a class="readmore" href="https://odwaz.github.io/wallet-microservices/">Read the wallet write-up</a>
       <ul class="stack">
         <li>Spring WebFlux</li><li>R2DBC</li><li>Double-entry ledger</li><li>Outbox</li><li>OAuth2 + OTP</li><li>ArgoCD</li><li>Terraform</li>
@@ -426,7 +426,7 @@
     <article class="project">
       <h3>SpazaAPi</h3>
       <p class="what">Commerce and delivery for spaza shops</p>
-      <p>Online ordering and delivery for South African spaza shops: an API gateway and six Spring Boot services coordinating through Kafka, idempotent payment-provider webhooks, and deliveries that recover from driver timeouts and offline drivers. Runs on Amazon EKS in Cape Town.</p>
+      <p>Online ordering and delivery for South African spaza shops: an API gateway and six Spring Boot services coordinating through Kafka, idempotent payment-provider webhooks, and deliveries that recover from driver timeouts and offline drivers. Deploys to Amazon EKS in AWS&rsquo;s Cape Town region.</p>
       <a class="readmore" href="https://odwaz.github.io/spaza-api/">Read the SpazaAPi write-up</a>
       <ul class="stack">
         <li>Spring Boot</li><li>Spring Cloud Gateway</li><li>Apache Kafka</li><li>PostgreSQL</li><li>WebSocket</li><li>Amazon EKS</li><li>Terraform</li>
@@ -444,29 +444,29 @@
 
 <section class="block" id="platform">
   <h2>How they ship</h2>
-  <p class="intro">Every service is Terraform-provisioned and runs on AWS, each deployed a different way: ArgoCD GitOps to EKS, Kubernetes manifests to EKS, and a Dockerized service on EC2. The infrastructure lives in its own repo, separate from the application code. <a href="https://odwaz.github.io/platform/">Read the cloud deployments write-up</a>.</p>
+  <p class="intro">The wallet ships with Argo CD GitOps to Amazon EKS, and SpazaAPi with a <code>kubectl</code> deploy from its pipeline, both on AWS infrastructure defined in Terraform. <a href="https://odwaz.github.io/platform/">Read the cloud deployments write-up</a>.</p>
 
   <div class="pipeline-card">
-    <header><h3>Gimba and SME Directory</h3><span>GitLab CI/CD, Maven on JDK 17</span></header>
+    <header><h3>Gimba</h3><span>GitLab CI/CD, Maven on JDK 17</span></header>
     <div class="stages-scroll">
       <ol class="stages">
         <li class="stage"><b>build</b><span>mvn compile</span></li>
         <li class="stage"><b>test</b><span>JUnit 5</span></li>
         <li class="stage gate"><b>quality</b><span>SonarCloud gate</span></li>
-        <li class="stage"><b>package</b><span>jar and image</span></li>
-        <li class="stage ship"><b>deploy</b><span>Kubernetes manifests</span></li>
+        <li class="stage"><b>package</b><span>jar</span></li>
       </ol>
     </div>
   </div>
 
   <div class="pipeline-card">
-    <header><h3>Wallet Microservices</h3><span>GitOps delivery, infrastructure as code</span></header>
+    <header><h3>Wallet Microservices</h3><span>GitLab CI/CD, then Argo CD GitOps</span></header>
     <div class="stages-scroll">
       <ol class="stages">
-        <li class="stage"><b>terraform</b><span>apply ECR and EKS</span></li>
-        <li class="stage"><b>build + test</b><span>GitLab CI/CD</span></li>
-        <li class="stage gate"><b>scan</b><span>Trivy</span></li>
-        <li class="stage ship"><b>deploy</b><span>ArgoCD sync</span></li>
+        <li class="stage"><b>build</b><span>Maven</span></li>
+        <li class="stage"><b>test</b><span>JUnit 5</span></li>
+        <li class="stage gate"><b>security</b><span>Trivy</span></li>
+        <li class="stage"><b>docker</b><span>push to ECR</span></li>
+        <li class="stage ship"><b>sync</b><span>Argo CD</span></li>
       </ol>
     </div>
   </div>
@@ -490,7 +490,7 @@
     <dl class="points">
       <div><dt>Modules in use</dt><dd>Networking, EKS, RDS, ECR and a GitHub OIDC role. A wrapper module combines them into one stack for an application.</dd></div>
       <div><dt>Separate state per stack</dt><dd>Two stacks so far, each with its own Terraform Cloud workspace and state.</dd></div>
-      <div><dt>Narrower permissions on the newer stack</dt><dd>The newer stack's role can change only resources named after its workspace, and admin policies, access keys and account settings are denied. The older wallet stack still uses a broad administrator role.</dd></div>
+      <div><dt>Narrower permissions on the newer stack</dt><dd>The newer stack's role can change only resources named after its workspace, and admin policies, access keys and account settings are denied.</dd></div>
       <div><dt>Short-lived credentials for image pushes</dt><dd>Terraform defines a role that GitHub Actions on the wallet repository's main branch can assume to push images to ECR, with no stored AWS keys.</dd></div>
     </dl>
     <ul class="stack">
@@ -531,10 +531,10 @@
     <ol role="list">
       <li class="step code" style="--n:1;--lane:2"><span class="n">11</span><span class="who">Orchestrator</span><span class="art" aria-hidden="true"><span class="pill">release</span></span><b>Open a release PR</b><span>only the images that changed</span></li>
       <li class="step you" style="--n:2;--lane:1"><span class="n">12</span><span class="who">You</span><span class="art" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="5.500" r="2.200"/><circle cx="6" cy="18.500" r="2.200"/><circle cx="18" cy="12" r="2.200"/><path d="M6 7.700v8.600M6.600 7.600c1 3 4.400 4.400 9.200 4.400"/></svg></span><b>Review the release</b><span>merging it is the deployment</span></li>
-      <li class="step code" style="--n:3;--lane:3"><span class="n">13</span><span class="who">Argo CD</span><span class="art" aria-hidden="true"><span class="snip">image: <i>new tag</i></span></span><b>Argo CD rolls it out</b><span>the cluster matches the repository</span></li>
-      <li class="step code" style="--n:4;--lane:2"><span class="n">14</span><span class="who">Orchestrator</span><span class="art" aria-hidden="true"><span class="checks"><span>✓ smoke</span></span></span><b>Run smoke checks</b><span>roll back if they fail</span></li>
+      <li class="step code" style="--n:3;--lane:3"><span class="n">13</span><span class="who">Argo CD</span><span class="art" aria-hidden="true"><span class="snip">image: <i>new tag</i></span></span><b>Argo CD syncs, then smoke-checks</b><span>every app healthy, the API answering</span></li>
+      <li class="step code" style="--n:4;--lane:2"><span class="n">14</span><span class="who">Orchestrator</span><span class="art" aria-hidden="true"><span class="checks"><span>✓ smoke</span></span></span><b>Record the verdict</b><span>a fresh failed release is rolled back</span></li>
       <li class="step code" style="--n:5;--lane:2"><span class="n">15</span><span class="who">Orchestrator</span><span class="art" aria-hidden="true"><span class="pill">shipped</span></span><b>Tell the issues</b><span>their change is running</span></li>
-      <li class="step code" style="--n:6;--lane:2"><span class="n">16</span><span class="who">Orchestrator</span><span class="art" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span><b>Promote</b><span>what passed moves to the next environment</span></li>
+      <li class="step code" style="--n:6;--lane:2"><span class="n">16</span><span class="who">Orchestrator</span><span class="art" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span><b>Promote</b><span>a pull request moves the next environment</span></li>
     </ol>
   </div>
   <p class="flow-note">A release is a reviewed commit in a separate deployments repository, so rolling back is reverting that commit.</p>
@@ -551,7 +551,7 @@
     <h3>From merge to running</h3>
     <p class="what">The deploy stage</p>
     <p>A sixth workflow takes over once a pull request is merged. It finds the images that changed and opens a release pull request in a separate deployments repository, which holds what should be running as Kubernetes manifests. Argo CD watches that repository, so merging the release is the deployment and reverting it is the rollback.</p>
-    <p>After a release the orchestrator runs smoke checks and rolls back if they fail, tells the original issues that their change has shipped, and promotes what passed to the next environment. The whole path has been run end to end on a test application of six services, from written specs through to released versions.</p>
+    <p>After each sync Argo CD runs a smoke check and reports the result. On a pass the orchestrator tells the original issues their change has shipped and opens a pull request to promote the release to the next environment; a fresh release that fails gets a rollback pull request, merged automatically on dev. The whole path has been run end to end on a test application of six services, from written specs through to released versions.</p>
     <p>Jobs that run the target's code or the agent's code never see the GitHub App key. Dependencies are installed in a job with no secrets, and nothing such a job hands on is trusted without being checked.</p>
     <ul class="stack">
       <li>Argo CD</li><li>GitOps</li><li>Kustomize</li><li>Release pull requests</li><li>Smoke checks</li><li>Rollback</li><li>Promotion</li>

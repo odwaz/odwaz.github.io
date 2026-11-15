@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cloud Deployments — Three services, three ways on AWS | Odwa Matiwane</title>
-<meta name="description" content="Three services deployed three different ways on AWS — ArgoCD GitOps to EKS, Kubernetes manifests to EKS, and a Dockerized Spring Boot app on EC2 — with the only common thread being Terraform-provisioned infrastructure on AWS.">
+<title>Cloud Deployments — How my projects deploy to AWS | Odwa Matiwane</title>
+<meta name="description" content="How my projects deploy to AWS: Terraform for the infrastructure, and Argo CD GitOps or kubectl from the pipeline for the services.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316181b'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23d4b56a'%3EOM%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/assets/writeup.css">
 </head>
@@ -17,27 +17,26 @@
 </nav>
 
 <header>
-  <p class="eyebrow">terraform<span class="sep">&middot;</span>aws<span class="sep">&rarr;</span>three services, three ways</p>
+  <p class="eyebrow">terraform<span class="sep">&middot;</span>aws<span class="sep">&rarr;</span>three delivery paths</p>
   <h1>Cloud Deployments</h1>
   <p class="thesis">
-    Three services, deployed <strong>three genuinely different ways</strong> &mdash; GitOps to Kubernetes,
-    raw manifests to Kubernetes, and a container on a plain VM. The <strong>only</strong> things they share are that
-    every one is <strong>provisioned with Terraform</strong> and runs on <strong>AWS</strong>. Beyond that, each
-    has its own CI system, its own delivery model, and its own compute target.
+    Each project <strong>deploys to AWS from code</strong>: Terraform defines the infrastructure and a pipeline
+    builds and ships the services. What differs is the delivery path: <strong>Argo CD GitOps</strong> or a
+    <strong>kubectl</strong> deploy from the pipeline.
   </p>
   <div class="meta-row">
     <span class="pill hot">Terraform</span>
     <span class="pill hot">AWS</span>
-    <span class="pill hot">EKS + EC2</span>
-    <span class="pill hot">ArgoCD &middot; kubectl &middot; Docker</span>
+    <span class="pill hot">Amazon EKS</span>
+    <span class="pill hot">Argo CD &middot; kubectl</span>
     <span class="pill">GitLab CI/CD &amp; GitHub Actions</span>
   </div>
 </header>
 
 <div class="diagram-card">
-  <p class="diagram-title">Deployed three ways &mdash; only Terraform &amp; AWS are shared</p>
-  <svg class="diagram-svg" viewBox="0 0 940 292" width="100%" height="auto" role="img"
-       aria-label="Three deployment lanes. wallet-microservices: GitLab CI/CD and SonarCloud, delivered by ArgoCD GitOps to Amazon EKS. real-time-cdp: GitLab CI and SonarCloud, delivered by kubectl manifests to Amazon EKS with Kafka. sme-directory: GitHub Actions and SonarCloud, packaged as a Docker image in ECR and run as a container on Amazon EC2 with RDS. All three are provisioned by Terraform on AWS."
+  <p class="diagram-title">Three delivery paths, all defined in code</p>
+  <svg class="diagram-svg" viewBox="0 0 940 292" width="100%" role="img"
+       aria-label="Three delivery paths. wallet-microservices: GitLab CI/CD with a Trivy scan, delivered by Argo CD GitOps to Amazon EKS. SpazaAPi: GitLab CI/CD with a SonarCloud gate, delivered by kubectl from the pipeline to Amazon EKS. Orchestrator releases: GitHub Actions, delivered by a release pull request to a deployments repository that Argo CD syncs to Kubernetes, a local kind cluster, k3s on an AWS instance, and staging on EKS. The wallet and SpazaAPi infrastructure is defined in Terraform."
        font-family="Inter, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
     <defs>
       <marker id="dArr" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
@@ -45,15 +44,13 @@
       </marker>
     </defs>
 
-    <!-- column headers -->
     <g font-family="'JetBrains Mono', ui-monospace, monospace" font-size="9" fill="#9aa4b8" text-anchor="middle" letter-spacing="0.5">
-      <text x="91"  y="34">SERVICE</text>
-      <text x="285" y="34">CI + QUALITY</text>
+      <text x="91"  y="34">PROJECT</text>
+      <text x="285" y="34">CI + CHECKS</text>
       <text x="515" y="34">DELIVERY</text>
-      <text x="792" y="34">AWS TARGET</text>
+      <text x="792" y="34">TARGET</text>
     </g>
 
-    <!-- flow arrows -->
     <g stroke="#2dd4bf" stroke-opacity="0.55" stroke-width="1.6" marker-end="url(#dArr)">
       <line x1="176" y1="76"  x2="189" y2="76"/>
       <line x1="380" y1="76"  x2="419" y2="76"/>
@@ -66,7 +63,6 @@
       <line x1="610" y1="240" x2="649" y2="240"/>
     </g>
 
-    <!-- ===== service label boxes ===== -->
     <g>
       <rect x="6" y="46"  width="170" height="60" rx="10" fill="#2dd4bf" fill-opacity="0.06" stroke="#2dd4bf" stroke-opacity="0.32"/>
       <rect x="6" y="128" width="170" height="60" rx="10" fill="#2dd4bf" fill-opacity="0.06" stroke="#2dd4bf" stroke-opacity="0.32"/>
@@ -74,16 +70,15 @@
     </g>
     <g text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="10.5" fill="#2dd4bf">
       <text x="91" y="72">wallet-microservices</text>
-      <text x="91" y="154">real-time-cdp</text>
-      <text x="91" y="236">sme-directory</text>
+      <text x="91" y="154">SpazaAPi</text>
+      <text x="91" y="236">orchestrator releases</text>
     </g>
     <g text-anchor="middle" font-size="8.5" fill="#4ade80">
       <text x="91" y="90">Terraform &#183; AWS</text>
       <text x="91" y="172">Terraform &#183; AWS</text>
-      <text x="91" y="254">Terraform &#183; AWS</text>
+      <text x="91" y="254">test application</text>
     </g>
 
-    <!-- ===== CI + quality boxes ===== -->
     <g>
       <rect x="190" y="46"  width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
       <rect x="190" y="128" width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
@@ -91,72 +86,75 @@
     </g>
     <g text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11" fill="#f1f5fb">
       <text x="285" y="72">GitLab CI/CD</text>
-      <text x="285" y="154">GitLab CI</text>
+      <text x="285" y="154">GitLab CI/CD</text>
       <text x="285" y="236">GitHub Actions</text>
     </g>
     <g text-anchor="middle" font-size="9" fill="#9aa4b8">
-      <text x="285" y="90">SonarCloud gate</text>
+      <text x="285" y="90">Trivy security scan</text>
       <text x="285" y="172">SonarCloud gate</text>
-      <text x="285" y="254">SonarCloud gate</text>
+      <text x="285" y="254">tests on a clean runner</text>
     </g>
 
-    <!-- ===== delivery boxes ===== -->
     <g>
       <rect x="420" y="46"  width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
       <rect x="420" y="128" width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
       <rect x="420" y="210" width="190" height="60" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
     </g>
     <g text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11" fill="#f1f5fb">
-      <text x="515" y="72">ArgoCD GitOps</text>
-      <text x="515" y="154">kubectl manifests</text>
-      <text x="515" y="236">Docker image</text>
+      <text x="515" y="72">Argo CD GitOps</text>
+      <text x="515" y="154">kubectl</text>
+      <text x="515" y="236">release pull request</text>
     </g>
     <g text-anchor="middle" font-size="9" fill="#9aa4b8">
-      <text x="515" y="90">pull-based sync</text>
-      <text x="515" y="172">push apply</text>
-      <text x="515" y="254">jar &#8594; ECR image</text>
+      <text x="515" y="90">cluster pulls from Git</text>
+      <text x="515" y="172">apply &#183; set image &#183; rollout</text>
+      <text x="515" y="254">deployments repo &#8594; Argo CD</text>
     </g>
 
-    <!-- ===== AWS target boxes ===== -->
     <rect x="650" y="46"  width="284" height="60" rx="10" fill="#38bdf8" fill-opacity="0.08" stroke="#38bdf8" stroke-opacity="0.4"/>
     <rect x="650" y="128" width="284" height="60" rx="10" fill="#38bdf8" fill-opacity="0.08" stroke="#38bdf8" stroke-opacity="0.4"/>
     <rect x="650" y="210" width="284" height="60" rx="10" fill="#fbbf24" fill-opacity="0.08" stroke="#fbbf24" stroke-opacity="0.42"/>
     <g text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="600" font-size="11.5">
       <text x="792" y="72"  fill="#38bdf8">Amazon EKS</text>
       <text x="792" y="154" fill="#38bdf8">Amazon EKS</text>
-      <text x="792" y="236" fill="#fbbf24">Amazon EC2</text>
+      <text x="792" y="236" fill="#fbbf24">Kubernetes</text>
     </g>
     <g text-anchor="middle" font-size="9" fill="#9aa4b8">
-      <text x="792" y="90">containers &#183; ECR images</text>
-      <text x="792" y="172">Kubernetes &#183; Apache Kafka</text>
-      <text x="792" y="254">Docker container &#183; RDS</text>
+      <text x="792" y="90">Kustomize overlays &#183; ECR images</text>
+      <text x="792" y="172">Cape Town &#183; RDS PostgreSQL</text>
+      <text x="792" y="254">kind &#183; k3s on AWS &#183; EKS</text>
     </g>
   </svg>
-  <p class="diagram-foot">common thread <b>&#10003;</b> every service is Terraform-provisioned, on AWS, behind a SonarCloud gate &mdash; everything else differs on purpose</p>
+  <p class="diagram-foot">common thread <b>&#10003;</b> infrastructure defined in Terraform, services shipped from a pipeline</p>
 </div>
 
-<h2>Deployed three ways</h2>
-<p class="section-sub">Same discipline &mdash; infrastructure as code, a quality gate, a repeatable pipeline &mdash; expressed through three different delivery models and two different compute services.</p>
+<h2>Three delivery paths</h2>
+<p class="section-sub">How each project gets from a commit to a cluster.</p>
 <div class="grid">
   <div class="feature">
     <h3>wallet-microservices</h3>
     <span class="tgt eks">EKS &middot; GitOps</span>
-    <p>GitLab CI/CD builds the service images to ECR and updates the Git desired-state. <b>ArgoCD</b> watches that repo and syncs it onto <b>Amazon EKS</b> &mdash; pull-based GitOps, so the pipeline never holds cluster-admin credentials.</p>
+    <p>Terraform defines the VPC, the <b>EKS</b> cluster, RDS and ECR, and installs <b>Argo CD</b> with Helm. GitLab CI/CD builds and tests the services, scans them with <b>Trivy</b> and pushes the images to ECR. Argo CD syncs the Kustomize overlays for dev and staging onto the cluster, so the pipeline never needs cluster credentials.</p>
   </div>
   <div class="feature">
-    <h3>real-time-cdp <span style="color:var(--muted);font-weight:400">(Gimba)</span></h3>
-    <span class="tgt eks">EKS &middot; manifests</span>
-    <p>GitLab CI runs the build and the SonarCloud gate, then applies <b>Kubernetes manifests</b> directly with <code>kubectl</code>. The event-driven CDP runs on <b>Amazon EKS</b> alongside its <b>Apache Kafka</b>.</p>
+    <h3>SpazaAPi</h3>
+    <span class="tgt eks">EKS &middot; kubectl</span>
+    <p>Terraform defines the VPC, the <b>EKS</b> cluster, RDS PostgreSQL, ECR and an EC2 instance for the web front end, in AWS's Cape Town region. GitLab CI/CD builds, tests and runs the <b>SonarCloud</b> gate, pushes the images, then deploys with <code>kubectl</code>: it applies the manifests, sets the new images and waits for every rollout to finish.</p>
   </div>
   <div class="feature">
-    <h3>sme-directory</h3>
-    <span class="tgt ec2">EC2 &middot; Docker</span>
-    <p><b>GitHub Actions</b> builds the Spring Boot jar, gates it with SonarCloud, and packages it as a <b>Docker image in ECR</b> &mdash; then runs that container on an <b>Amazon EC2</b> instance backed by RDS. Containerized, but without a Kubernetes control plane.</p>
+    <h3>Orchestrator releases</h3>
+    <span class="tgt ec2">Kubernetes &middot; GitOps</span>
+    <p>When a change merges, the agent orchestrator opens a <b>release pull request</b> in a separate deployments repository that lists what should be running. <b>Argo CD</b> keeps a cluster in line with that repository, so merging a release deploys it and reverting the commit rolls it back. It releases a test application to three clusters: a local kind cluster, k3s on an AWS instance, and staging on EKS with blue/green releases through Argo Rollouts. After each sync Argo CD runs a smoke check; a fresh release that fails it gets a rollback pull request, merged automatically on dev.</p>
   </div>
 </div>
 
-<h2>The common thread &mdash; IaC on AWS</h2>
-<p class="section-sub">Whatever the runtime, the AWS footprint under each service is defined in Terraform, with state kept in Terraform Cloud: one workspace per stack, stored remotely and locked while a run is in progress.</p>
+<div class="hl">
+  <h3>Gimba and SME Directory</h3>
+  <p>Both have pipelines, but no deployment is defined in their repositories yet. Gimba's GitLab CI builds, tests, runs the SonarCloud gate and packages the jar. SME Directory runs SonarCloud on GitHub Actions. Gimba also has Kubernetes manifests for itself and Kafka, ready for a cluster.</p>
+</div>
+
+<h2>The common thread &mdash; infrastructure as code</h2>
+<p class="section-sub">The AWS side of the wallet and SpazaAPi is defined in Terraform, with state kept in Terraform Cloud: one workspace per stack, stored remotely and locked while a run is in progress.</p>
 
 <p class="code-label"><b>versions.tf</b> &mdash; remote state in Terraform Cloud, one workspace per stack</p>
 <pre class="tf"><span class="c"># Each stack has its own Terraform Cloud workspace, so its state is separate from every other stack.</span>
@@ -170,42 +168,42 @@ terraform {
 }</pre>
 
 <div class="hl">
-  <h3>One toolchain philosophy, three targets</h3>
-  <p>Each service still gets the same treatment &mdash; a version-controlled pipeline, a SonarCloud quality gate, and Terraform-defined infrastructure &mdash; but the delivery model is matched to the workload: GitOps where the cluster should self-heal, plain manifests where a direct apply is simplest, and a container on a VM where a full Kubernetes control plane would be overkill.</p>
+  <h3>Why two delivery styles</h3>
+  <p>GitOps where the cluster's state should come from Git and every change is a reviewable commit: the wallet and the orchestrator's releases. A direct <code>kubectl</code> deploy where one pipeline owning the rollout is simpler: SpazaAPi.</p>
 </div>
 <div class="hl">
-  <h3>Least-privilege delivery</h3>
-  <p>The GitOps path (ArgoCD) means the wallet pipeline never holds cluster credentials &mdash; it writes desired state to Git and the cluster pulls. The EC2 path pulls a container image from ECR onto the host. Different trust models, each scoped to what that deployment actually needs.</p>
+  <h3>Who holds which credentials</h3>
+  <p>With Argo CD, the wallet's pipeline has no cluster credentials: it pushes images and the cluster pulls its desired state from Git. SpazaAPi's pipeline deploys directly, so it does need cluster access.</p>
 </div>
 
 <h2>Tech stack</h2>
 <div class="stack-group">
   <p class="stack-label">CI/CD &amp; delivery</p>
   <div class="chips">
-    <span class="chip">GitLab CI/CD</span><span class="chip">GitHub Actions</span><span class="chip">ArgoCD (GitOps)</span><span class="chip">kubectl</span><span class="chip">SonarCloud</span>
+    <span class="chip">GitLab CI/CD</span><span class="chip">GitHub Actions</span><span class="chip">Argo CD (GitOps)</span><span class="chip">Kustomize</span><span class="chip">kubectl</span><span class="chip">SonarCloud</span><span class="chip">Trivy</span>
   </div>
 </div>
 <div class="stack-group">
   <p class="stack-label">AWS</p>
   <div class="chips">
-    <span class="chip">Amazon EKS</span><span class="chip">Amazon EC2</span><span class="chip">ECR</span><span class="chip">RDS</span><span class="chip">ALB + ACM</span><span class="chip">Route 53</span><span class="chip">S3</span><span class="chip">CloudWatch</span>
+    <span class="chip">Amazon EKS</span><span class="chip">Amazon EC2</span><span class="chip">ECR</span><span class="chip">RDS PostgreSQL</span><span class="chip">VPC</span><span class="chip">IAM</span>
   </div>
 </div>
 <div class="stack-group">
   <p class="stack-label">Infrastructure as code</p>
   <div class="chips">
-    <span class="chip">Terraform &ge; 1.5</span><span class="chip">HCL modules</span><span class="chip">Terraform Cloud remote state</span><span class="chip">One workspace per stack</span>
+    <span class="chip">Terraform &ge; 1.5</span><span class="chip">Terraform Cloud</span><span class="chip">HCL modules</span><span class="chip">One workspace per stack</span>
   </div>
 </div>
 
 <h2>How it ships</h2>
-<p class="section-sub">The shape is the same everywhere; the last stage is what differs.</p>
+<p class="section-sub">The shape is the same for each project; the delivery step is what differs.</p>
 <div class="pipeline-scroll">
   <div class="pipeline">
-    <div class="stage"><span class="s-name">terraform</span><span class="s-meta">provision AWS &middot; remote state</span></div>
+    <div class="stage"><span class="s-name">terraform</span><span class="s-meta">define AWS &middot; Terraform Cloud</span></div>
     <div class="stage"><span class="s-name">ci</span><span class="s-meta">GitLab CI / GitHub Actions</span></div>
-    <div class="stage quality"><span class="s-name">gate</span><span class="s-meta">SonarCloud</span></div>
-    <div class="stage deploy"><span class="s-name">deliver</span><span class="s-meta">ArgoCD / kubectl / jar &rarr; EKS &middot; EC2</span></div>
+    <div class="stage quality"><span class="s-name">checks</span><span class="s-meta">tests &middot; SonarCloud &middot; Trivy</span></div>
+    <div class="stage deploy"><span class="s-name">deliver</span><span class="s-meta">Argo CD / kubectl &rarr; Kubernetes</span></div>
   </div>
 </div>
 
